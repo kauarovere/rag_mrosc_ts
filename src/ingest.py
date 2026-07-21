@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from tqdm import tqdm
 
 # Carrega variáveis de ambiente do .env (se existir)

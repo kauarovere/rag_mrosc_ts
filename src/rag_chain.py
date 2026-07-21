@@ -5,7 +5,7 @@ Montagem da chain de RAG jurídico via LCEL (LangChain Expression Language).
 
 Pipeline:
   pergunta do usuário
-    → retriever (busca semântica no Chroma)
+    → retriever (busca semântica no Chroma/FAISS)
     → formata contexto com metadados (artigo, fonte)
     → prompt jurídico especializado
     → LLM
@@ -27,7 +27,7 @@ import os
 from typing import Any, Optional
 
 from dotenv import load_dotenv
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough
@@ -132,6 +132,7 @@ def build_rag_chain(provider: Optional[str] = None, k: int = 6):
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", SYSTEM_PROMPT),
+            ("human", "{question}"),
         ]
     )
 
