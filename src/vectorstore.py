@@ -65,6 +65,9 @@ def build_vectorstore(
         embedding=embeddings,
     )
     
+    # Garante que o diretório de persistência existe
+    Path(persist_dir).mkdir(parents=True, exist_ok=True)
+
     # Salva o índice e metadados no disco
     vectorstore.save_local(persist_dir)
 

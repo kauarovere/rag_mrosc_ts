@@ -17,6 +17,13 @@ Uso:
 import os
 import re
 import sys
+
+# Garante saída UTF-8 no Windows (evita UnicodeEncodeError com emojis)
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from pathlib import Path
 from typing import Optional
 
@@ -32,7 +39,7 @@ load_dotenv()
 # Configurações (lidas do .env ou valores padrão)
 # ---------------------------------------------------------------------------
 DATA_DIR = Path(__file__).parent.parent / "data"
-LEI_FILE = DATA_DIR / "lei_mrosc.docx"
+LEI_FILE = DATA_DIR / "Lei MROSC.docx"
 DECRETO_FILE = DATA_DIR / "Decreto nº 57.5752016.docx"
 
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))         # TODO(usuário): ajuste se necessário

@@ -19,7 +19,10 @@ from typing import Literal, Optional
 
 from dotenv import load_dotenv
 
-load_dotenv()
+from pathlib import Path as _Path
+_ENV_FILE = _Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=_ENV_FILE, override=True)
+
 
 # Tipo dos provedores suportados
 Provider = Literal["ollama", "groq", "gemini"]
@@ -109,7 +112,8 @@ def _get_groq():
             "Defina-a no arquivo .env ou use o provedor 'ollama' (padrão)."
         )
 
-    model = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+    model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+
     print(f"   ⚡ LLM: Groq | modelo: {model}")
 
     return ChatGroq(
