@@ -24,6 +24,8 @@ Uso:
 """
 
 import os
+import time
+import logging
 from typing import Any, Optional
 
 from dotenv import load_dotenv
@@ -177,13 +179,18 @@ def build_rag_chain(provider: Optional[str] = None, k: int = 6):
 def ask(
     chain,
     question: str,
+    max_retries: int = 3,
+    initial_wait: float = 5.0,
 ) -> dict[str, Any]:
     """
     Faz uma pergunta à chain e retorna a resposta com metadados de fonte.
+    Implementa retry com backoff exponencial para erros de rate limit (429).
 
     Args:
         chain: Chain LCEL construída por build_rag_chain().
         question: Pergunta do usuário em linguagem natural.
+        max_retries: Número máximo de tentativas após erro 429 (padrão: 3).
+        initial_wait: Tempo de espera inicial em segundos (dobra a cada tentativa).
 
     Returns:
         Dict com:
@@ -191,9 +198,34 @@ def ask(
           - "source_documents": list[Document] — documentos-fonte
           - "question": str — pergunta original
     """
-    result = chain.invoke(question)
-    result["question"] = question
-    return result
+    last_error = None
+    wait = initial_wait
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            result = chain.invoke(question)
+            result["question"] = question
+            return result
+
+        except Exception as e:
+            error_str = str(e)
+            is_rate_limit = "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "rate_limit" in error_str.lower()
+
+            if is_rate_limit and attempt < max_retries:
+                logging.warning(
+                    f"Rate limit atingido (tentativa {attempt}/{max_retries}). "
+                    f"Aguardando {wait:.0f}s antes de tentar novamente..."
+                )
+                time.sleep(wait)
+                wait *= 2  # backoff exponencial: 5s → 10s → 20s
+                last_error = e
+                continue
+
+            # Erro não é rate limit, ou esgotou as tentativas → propaga
+            raise
+
+    # Nunca deve chegar aqui, mas garante que o erro seja propagado
+    raise last_error
 
 
 def has_base_in_documents(answer: str) -> bool:
