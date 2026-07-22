@@ -39,23 +39,29 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 # Prompt do sistema — instrui o LLM como se comportar em contexto jurídico
 # ---------------------------------------------------------------------------
-SYSTEM_PROMPT = """Você é um assistente jurídico especializado no Marco Regulatório das Organizações da Sociedade Civil (MROSC) brasileiro. Sua base de conhecimento é composta por dois documentos:
+SYSTEM_PROMPT = """Você é um assistente especializado no Marco Regulatório das Organizações da Sociedade Civil (MROSC) brasileiro. Sua base de conhecimento é composta por duas fontes principais de informação:
 
-1. **Lei Federal nº 13.019/2014** (Lei MROSC), que estabelece as normas gerais de parcerias entre poder público e organizações da sociedade civil.
-2. **Decreto Municipal nº 57.575/2016** (Prefeitura de São Paulo), que regulamenta a aplicação da Lei MROSC no âmbito do Município de São Paulo.
+**1. Legislação Oficial (Base Principal)**
+- **Lei Federal nº 13.019/2014** (Lei MROSC), que estabelece as normas gerais de parcerias.
+- **Decreto Municipal nº 57.575/2016** (Prefeitura de São Paulo), que regulamenta a aplicação da Lei no município.
+
+**2. Documentos Complementares (Manuais e FAQs)**
+- Respostas a perguntas frequentes e cartilhas práticas que explicam e facilitam a compreensão da legislação oficial.
 
 **Regras que você DEVE seguir:**
 
-1. **Responda SOMENTE com base nos trechos fornecidos abaixo** como contexto. Não invente dispositivos legais, artigos, prazos ou definições que não estejam explicitamente presentes no contexto.
+1. **Responda SOMENTE com base nos trechos fornecidos abaixo** como contexto. Não invente dispositivos legais ou definições fora do contexto.
 
-2. **Sempre cite a fonte exata** ao usar uma informação: indique se é da Lei 13.019/2014 ou do Decreto 57.575/2016, e o número do artigo/parágrafo/inciso correspondente. Use o formato: *"conforme o art. X da Lei 13.019/2014"* ou *"nos termos do art. Y do Decreto 57.575/2016"*.
+2. **Prioridade de Fontes:** Sempre priorize a Legislação Oficial. Se a resposta estiver tanto na lei quanto no FAQ, cite a lei. Se a resposta estiver apenas no FAQ, use o FAQ, mas deixe claro que é uma explicação de um documento complementar.
 
-3. **Quando a pergunta envolver comparação** entre o que a Lei estabelece geralmente e como o Decreto Municipal de SP regulamenta especificamente, **explicite a relação entre os dois**. Por exemplo: "A Lei Federal, no art. X, prevê Y de forma geral; o Decreto Municipal, no art. Z, detalha isso especificamente para São Paulo da seguinte forma..."
+3. **Sempre cite a fonte exata:**
+   - Para leis: *"conforme o art. X da Lei 13.019/2014"* ou *"nos termos do art. Y do Decreto 57.575/2016"*.
+   - Para FAQs: *"conforme o documento complementar [Nome do FAQ]"*.
 
 4. **Se a informação não estiver nos trechos fornecidos**, diga claramente: "Não encontrei base nos documentos fornecidos para responder a esta pergunta." Não complemente com conhecimento genérico do modelo.
 
 5. **Ao final de toda resposta**, inclua obrigatoriamente o seguinte aviso:
-   "⚠️ *Esta resposta é uma organização informativa dos textos legais fornecidos e não substitui análise jurídica profissional. Para casos concretos, consulte um advogado especializado.*"
+   "⚠️ *Esta resposta é baseada nos documentos fornecidos e não substitui análise jurídica profissional.*"
 
 **Contexto recuperado dos documentos:**
 
@@ -86,14 +92,20 @@ def format_documents_with_metadata(docs: list[Document]) -> str:
         artigo = meta.get("artigo", "?")
         status = meta.get("status", "vigente")
 
-        # Aviso se o artigo estiver revogado ou alterado
-        status_note = ""
-        if status == "revogado":
-            status_note = " [⚠️ ARTIGO REVOGADO — verifique a versão vigente]"
-        elif status == "alterado":
-            status_note = " [ℹ️ Artigo com redação alterada]"
+        tipo = meta.get("tipo", "desconhecido")
 
-        header = f"[Trecho {i}] {fonte} — Art. {artigo}{status_note}"
+        # Formatação diferente para Leis vs FAQs
+        if tipo == "faq":
+            header = f"[Trecho {i}] Material Complementar: {fonte} — {artigo}"
+        else:
+            # Aviso se o artigo estiver revogado ou alterado
+            status_note = ""
+            if status == "revogado":
+                status_note = " [⚠️ ARTIGO REVOGADO — verifique a versão vigente]"
+            elif status == "alterado":
+                status_note = " [ℹ️ Artigo com redação alterada]"
+
+            header = f"[Trecho {i}] {fonte} — Art. {artigo}{status_note}"
         formatted_parts.append(f"{header}\n{doc.page_content}")
 
     return "\n\n" + "\n\n---\n\n".join(formatted_parts) + "\n"

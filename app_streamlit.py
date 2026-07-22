@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import streamlit as st
+import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,14 +24,14 @@ load_dotenv()
 # Configuração da página (deve ser o PRIMEIRO comando Streamlit)
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="RAG Jurídico MROSC — Prefeitura de São Paulo",
-    page_icon="⚖",
+    page_title="ParcerIA — Consultor Jurídico MROSC",
+    page_icon=None,
     layout="centered",
     initial_sidebar_state="expanded",
     menu_items={
         "About": (
-            "**RAG Jurídico MROSC**\n\n"
-            "Sistema de consulta à Lei Federal 13.019/2014 e ao "
+            "**ParcerIA**\n\n"
+            "Consultor jurídico inteligente para a Lei Federal 13.019/2014 e o "
             "Decreto Municipal SP 57.575/2016.\n\n"
             "Esta é uma ferramenta informativa, não um canal oficial da Prefeitura de São Paulo."
         )
@@ -38,14 +39,22 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------------------------
-# Paleta de cores
+# Paleta de cores — Dark Mode (estilo Claude)
 # ---------------------------------------------------------------------------
-AZUL    = "#0d3145"   # azul escuro — fundo header, sidebar, footer
-ROXO    = "#8b55d8"   # roxo — cor primária, interações, badge Lei
-AMARELO = "#f8ae39"   # amarelo — accent, destaques, badge Decreto
-ROXO_D  = "#6b3db8"   # roxo escuro — hover states
-AZUL_M  = "#1a4a6b"   # azul médio — gradiente, elementos secundários
-CINZA_F = "#f4f6f9"   # fundo geral da sidebar e cards
+FUNDO    = "#1c1c1c"   # carvão escuro — fundo principal
+FUNDO_S  = "#252525"   # carvão médio — sidebar, cards
+FUNDO_E  = "#2e2e2e"   # carvão claro — hover, inputs
+TEXTO    = "#e8e6e1"   # off-white quente — texto principal
+TEXTO_S  = "#9a9790"   # cinza quente — texto secundário
+ROXO    = "#a78bfa"   # roxo claro — cor primária (mais legível no dark)
+ROXO_D  = "#8b6cf0"   # roxo médio — hover states
+AMARELO = "#f8ae39"   # amarelo — accent, destaques
+BORDA   = "rgba(255,255,255,0.08)"  # borda sutil dark
+
+# Mantém aliases para compatibilidade com badges legados
+AZUL   = "#c8d8e8"   # azul claro — texto em badges escuros
+AZUL_M = "#2a3a4a"   # para gradientes
+CINZA_F = FUNDO_S
 
 # ---------------------------------------------------------------------------
 # CSS — Design System Profissional
@@ -54,35 +63,70 @@ st.markdown(
     f"""
     <style>
     /* ── Tipografia ── */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Open+Sans:wght@400;600;700&display=swap');
     html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
 
     /* ── Reset de margens do bloco principal ── */
-    .block-container {{ padding-top: 1rem !important; padding-bottom: 2rem; overflow: visible !important; }}
+    .block-container {{ padding-top: 3.5rem !important; padding-bottom: 2rem; overflow: visible !important; }}
 
-    /* ── Cabeçalho ── */
-    .app-header {{
-        background: linear-gradient(135deg, {AZUL} 0%, {AZUL_M} 100%);
-        border-left: 4px solid {AMARELO};
-        border-radius: 12px;
-        padding: 1.6rem 2rem;
-        margin-top: 2rem;
-        margin-bottom: 1.75rem;
-        box-shadow: 0 4px 18px rgba(13, 49, 69, 0.22);
+    /* ── Background global dark ── */
+    .stApp, html, body {{ background-color: {FUNDO} !important; }}
+
+    /* ── Oculta o header nativo do Streamlit ── */
+    [data-testid="stHeader"] {{ display: none !important; }}
+
+    /* ── Nossa topbar (substitui o header do Streamlit) ── */
+    .parceria-topbar {{
+        position: fixed;
+        top: 0;
+        left: 21rem;
+        right: 0;
+        height: 52px;
+        background: {FUNDO};
+        border-bottom: 1px solid {BORDA};
+        display: flex;
+        align-items: center;
+        padding: 0 1.5rem;
+        z-index: 999999;
     }}
-    .app-header__title {{
-        margin: 0 0 0.3rem 0;
-        font-size: 1.45rem;
+    .parceria-topbar__name {{
+        font-size: 1.1rem;
         font-weight: 700;
-        color: #ffffff;
-        letter-spacing: -0.3px;
-        line-height: 1.3;
+        letter-spacing: -0.4px;
+        line-height: 1;
+        user-select: none;
     }}
-    .app-header__subtitle {{
-        margin: 0;
-        font-size: 0.82rem;
-        color: rgba(255,255,255,0.72);
-        font-weight: 400;
+    .parceria-topbar__name .parc {{ color: {TEXTO}; }}
+    .parceria-topbar__name .ia   {{ color: {ROXO}; font-style: italic; }}
+
+    /* ── Tela de boas-vindas ── */
+    .welcome-screen {{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        min-height: calc(100vh - 180px);
+        padding: 0 1rem 4rem;
+        text-align: center;
+    }}
+    .welcome-greeting {{
+        font-family: 'Open Sans', sans-serif !important;
+        font-size: 3.8rem !important;
+        font-weight: 700 !important;
+        color: {AZUL} !important;
+        letter-spacing: -1px !important;
+        margin: 0 0 0.8rem 0 !important;
+        line-height: 1.1 !important;
+    }}
+    .welcome-greeting span.ia-color {{ color: {ROXO} !important; font-style: italic; }}
+    .welcome-sub {{
+        font-family: 'Open Sans', sans-serif !important;
+        font-size: 1.2rem !important;
+        color: #8a95a3 !important;
+        margin: 0 !important;
+        font-weight: 400 !important;
+        max-width: 560px;
+        line-height: 1.55;
     }}
 
     /* ── Badges ── */
@@ -96,64 +140,118 @@ st.markdown(
         margin-right: 4px;
         vertical-align: middle;
     }}
-    .badge--lei      {{ background: {ROXO}; color: #fff; }}
-    .badge--decreto  {{ background: {AMARELO}; color: {AZUL}; }}
-    .badge--artigo   {{ background: {AZUL}; color: #fff; }}
-    .badge--revogado {{ background: #c0392b; color: #fff; }}
-    .badge--alterado {{ background: #d4801a; color: #fff; }}
+    .badge--lei      {{ background: {ROXO}; color: #0d0d0d; }}
+    .badge--decreto  {{ background: {AMARELO}; color: #1c1c1c; }}
+    .badge--artigo   {{ background: {FUNDO_E}; color: {TEXTO}; border: 1px solid {BORDA}; }}
+    .badge--revogado {{ background: #7f1d1d; color: #fecaca; }}
+    .badge--alterado {{ background: #78350f; color: #fde68a; }}
 
     /* ── Cards de fonte ── */
     .source-card {{
-        border: 1px solid #e2e8f0;
+        border: 1px solid {BORDA};
         border-left: 3px solid {AMARELO};
         border-radius: 6px;
         padding: 0.7rem 1rem;
         margin: 0.35rem 0;
-        background: #ffffff;
+        background: {FUNDO_S};
         font-size: 0.81rem;
-        color: #3d4a5c;
+        color: {TEXTO};
         line-height: 1.5;
     }}
     .source-card--lei      {{ border-left-color: {ROXO}; }}
-    .source-card--revogado {{ border-left-color: #c0392b; background: #fdf5f5; }}
-    .source-card__trecho   {{ color: #6b7a8d; font-size: 0.78rem; margin-top: 0.4rem; display: block; }}
+    .source-card--revogado {{ border-left-color: #f87171; background: #2d1515; }}
+    .source-card__trecho   {{ color: {TEXTO_S}; font-size: 0.78rem; margin-top: 0.4rem; display: block; }}
 
     /* ── Alertas ── */
     .alert-no-base {{
-        background: #fffbf0;
-        border: 1px solid {AMARELO};
+        background: #2a2200;
+        border: 1px solid rgba(248,174,57,0.35);
         border-left: 3px solid {AMARELO};
         border-radius: 6px;
         padding: 0.85rem 1.1rem;
         margin: 0.6rem 0;
-        color: {AZUL};
+        color: #fde68a;
         font-size: 0.88rem;
     }}
     .alert-no-base strong {{ color: {ROXO}; }}
     .alert-error {{
-        background: #fdf5f5;
-        border: 1px solid #e0a0a0;
-        border-left: 3px solid #c0392b;
+        background: #2d1515;
+        border: 1px solid rgba(248,113,113,0.3);
+        border-left: 3px solid #f87171;
         border-radius: 6px;
         padding: 0.85rem 1.1rem;
         margin: 0.6rem 0;
-        color: {AZUL};
+        color: #fecaca;
         font-size: 0.88rem;
     }}
 
-    /* ── Rodapé ── */
-    .legal-footer {{
-        background: {AZUL};
-        border-top: 3px solid {AMARELO};
-        border-radius: 8px;
-        padding: 0.9rem 1.4rem;
-        font-size: 0.76rem;
-        color: rgba(255,255,255,0.65);
-        margin-top: 2.5rem;
-        text-align: center;
-        line-height: 1.6;
+    /* ── Modal de Aviso Legal ── */
+    .modal-overlay {{
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 9999998;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(3px);
     }}
-    .legal-footer strong {{ color: {AMARELO}; }}
+    .modal-overlay.active {{ display: flex; }}
+    .modal-box {{
+        background: {FUNDO_S};
+        border: 1px solid {BORDA};
+        border-radius: 14px;
+        padding: 2rem 2.2rem 1.8rem;
+        max-width: 520px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        position: relative;
+        animation: modalIn 0.25s ease;
+    }}
+    @keyframes modalIn {{
+        from {{ opacity: 0; transform: translateY(12px) scale(0.97); }}
+        to   {{ opacity: 1; transform: translateY(0)  scale(1);    }}
+    }}
+    .modal-box__title {{
+        font-size: 1rem;
+        font-weight: 700;
+        color: {TEXTO};
+        margin: 0 0 0.8rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }}
+    .modal-box__title::before {{
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 1.1rem;
+        background: {AMARELO};
+        border-radius: 2px;
+        flex-shrink: 0;
+    }}
+    .modal-box__body {{
+        font-size: 0.86rem;
+        color: {TEXTO_S};
+        line-height: 1.7;
+        margin: 0 0 1.4rem 0;
+    }}
+    .modal-box__body strong {{ color: {TEXTO}; }}
+    .modal-btn {{
+        display: inline-block;
+        background: {ROXO};
+        color: #fff;
+        border: none;
+        border-radius: 7px;
+        padding: 0.6rem 1.6rem;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.18s ease, transform 0.1s ease;
+        font-family: 'Inter', sans-serif;
+    }}
+    .modal-btn:hover {{ background: {ROXO_D}; transform: translateY(-1px); }}
+    .modal-btn:active {{ transform: translateY(0); }}
 
     /* ── Botões ── */
     .stButton > button {{
@@ -174,32 +272,34 @@ st.markdown(
 
     /* ── Sidebar ── */
     [data-testid="stSidebar"] {{
-        background: {CINZA_F};
-        border-right: 2px solid rgba(248, 174, 57, 0.3);
+        background: {FUNDO_S} !important;
+        border-right: 1px solid {BORDA};
     }}
     [data-testid="stSidebar"] h3 {{
-        color: {AZUL};
+        color: {TEXTO};
         font-size: 0.82rem;
         font-weight: 700;
         margin-bottom: 0.5rem;
     }}
 
-    /* ── Sidebar labels — SEM uppercase para evitar corte de texto ── */
+    /* ── Sidebar labels ── */
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] .stSlider label,
     [data-testid="stSidebar"] .stSelectbox label {{
         font-size: 0.82rem !important;
         font-weight: 600 !important;
-        color: {AZUL} !important;
+        color: {TEXTO} !important;
     }}
 
-    /* ── Chat input — corrige borda vermelha do Streamlit ── */
+    /* ── Chat input ── */
     [data-testid="stChatInput"],
     [data-testid="stChatInput"] textarea,
     [data-testid="stChatInputTextArea"],
     .stChatInput > div,
     .stChatInput textarea {{
-        border-color: #d0d8e4 !important;
+        background: {FUNDO_E} !important;
+        border-color: {BORDA} !important;
+        color: {TEXTO} !important;
         outline: none !important;
         box-shadow: none !important;
     }}
@@ -207,7 +307,7 @@ st.markdown(
     [data-testid="stChatInput"] textarea:focus,
     .stChatInput textarea:focus {{
         border-color: {ROXO} !important;
-        box-shadow: 0 0 0 2px rgba(139, 85, 216, 0.18) !important;
+        box-shadow: 0 0 0 2px rgba(167,139,250,0.2) !important;
         outline: none !important;
     }}
     /* Remove qualquer vermelho residual do Streamlit */
@@ -252,11 +352,10 @@ st.markdown(
 # ---------------------------------------------------------------------------
 st.markdown(
     """
-    <div class="app-header">
-        <p class="app-header__title">RAG Jurídico MROSC</p>
-        <p class="app-header__subtitle">
-            Consulta à Lei Federal 13.019/2014 e ao Decreto Municipal SP 57.575/2016
-        </p>
+    <div class="parceria-topbar">
+        <span class="parceria-topbar__name">
+            <span class="parc">Parcer</span><span class="ia">IA</span>
+        </span>
     </div>
     """,
     unsafe_allow_html=True,
@@ -408,7 +507,7 @@ def render_source_cards(source_docs: list) -> None:
             seen.add(key)
             unique_docs.append(doc)
 
-    with st.expander(f"Fontes consultadas — {len(unique_docs)} artigo(s)", expanded=True):
+    with st.expander(f"Fontes consultadas — {len(unique_docs)} artigo(s)", expanded=False):
         for doc in unique_docs:
             meta = doc.metadata
             fonte = meta.get("fonte", "?")
@@ -473,6 +572,103 @@ def render_chat_history():
 # ---------------------------------------------------------------------------
 # Área principal do chat
 # ---------------------------------------------------------------------------
+
+# Tela de boas-vindas (exibida só quando não há histórico)
+if not st.session_state["messages"]:
+    components.html(
+        f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta charset="utf-8">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            html, body {{ background: {FUNDO}; overflow: hidden; }}
+            .welcome-wrap {{
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                padding: 2.5rem 1rem 1rem;
+            }}
+            .greeting {{
+                font-family: 'Open Sans', sans-serif;
+                font-size: 3.6rem;
+                font-weight: 700;
+                color: {TEXTO};
+                letter-spacing: -1px;
+                line-height: 1.1;
+                margin-bottom: 0.8rem;
+            }}
+            .mrosc {{ color: {ROXO}; font-style: italic; }}
+            .cursor {{
+                display: inline-block;
+                color: {ROXO};
+                animation: blink 0.75s step-end infinite;
+            }}
+            @keyframes blink {{
+                0%, 100% {{ opacity: 1; }}
+                50%       {{ opacity: 0; }}
+            }}
+            .sub {{
+                font-family: 'Open Sans', sans-serif;
+                font-size: 1.2rem;
+                color: {TEXTO_S};
+                font-weight: 400;
+                max-width: 560px;
+                line-height: 1.55;
+                opacity: 0;
+                transition: opacity 0.7s ease;
+            }}
+        </style>
+        </head>
+        <body>
+        <div class="welcome-wrap">
+            <p class="greeting">
+                <span id="p1"></span><span id="p2" class="mrosc"></span><span id="p3"></span><span class="cursor">|</span>
+            </p>
+            <p class="sub" id="sub">Fa&ccedil;a sua pergunta sobre a Lei 13.019/2014 ou o Decreto Municipal 57.575/2016</p>
+        </div>
+        <script>
+            var part1 = "O que est\u00e1 buscando no ";
+            var part2 = "MROSC";
+            var part3 = " hoje?";
+            var p1 = document.getElementById('p1');
+            var p2 = document.getElementById('p2');
+            var p3 = document.getElementById('p3');
+            var cursor = document.querySelector('.cursor');
+            var sub = document.getElementById('sub');
+            var i = 0;
+            var total = part1.length + part2.length + part3.length;
+            function typeChar() {{
+                if (i < part1.length) {{
+                    p1.textContent += part1[i];
+                }} else if (i < part1.length + part2.length) {{
+                    p2.style.display = 'inline';
+                    p2.textContent += part2[i - part1.length];
+                }} else {{
+                    p3.textContent += part3[i - part1.length - part2.length];
+                }}
+                i++;
+                if (i < total) {{
+                    setTimeout(typeChar, 44);
+                }} else {{
+                    setTimeout(function() {{
+                        cursor.style.display = 'none';
+                        sub.style.opacity = '1';
+                    }}, 700);
+                }}
+            }}
+            setTimeout(typeChar, 400);
+        </script>
+        </body>
+        </html>
+        """,
+        height=260,
+        scrolling=False,
+    )
+
 render_chat_history()
 
 input_value = st.session_state.pop("input_question", "")
@@ -559,14 +755,32 @@ with col2:
 # Rodapé
 # ---------------------------------------------------------------------------
 st.markdown(
-    """
-    <div class="legal-footer">
-        <strong>Aviso Legal</strong> — Este sistema é uma ferramenta informativa de consulta a textos jurídicos e
-        <strong>não substitui análise jurídica profissional</strong>. As respostas são geradas automaticamente
-        com base nos documentos indexados (Lei 13.019/2014 e Decreto 57.575/2016) e podem conter imprecisões.
-        Para casos concretos, consulte um advogado especializado.
-        Esta ferramenta <strong>não é um canal oficial da Prefeitura de São Paulo</strong>.
+    f"""
+    <div class="modal-overlay" id="legalModal">
+        <div class="modal-box">
+            <p class="modal-box__title">Aviso Legal</p>
+            <p class="modal-box__body">
+                Este sistema é uma ferramenta informativa de consulta a textos jurídicos e
+                <strong>não substitui análise jurídica profissional</strong>.
+                As respostas são geradas automaticamente com base nos documentos indexados
+                (Lei 13.019/2014 e Decreto 57.575/2016) e podem conter imprecisões.<br><br>
+                Para casos concretos, consulte um advogado especializado.
+                Esta ferramenta <strong>não é um canal oficial da Prefeitura de São Paulo</strong>.
+            </p>
+            <button class="modal-btn" onclick="closeModal()">Entendi</button>
+        </div>
     </div>
+    <script>
+        function closeModal() {{
+            document.getElementById('legalModal').classList.remove('active');
+            sessionStorage.setItem('legalAccepted', '1');
+        }}
+        (function() {{
+            if (!sessionStorage.getItem('legalAccepted')) {{
+                document.getElementById('legalModal').classList.add('active');
+            }}
+        }})();
+    </script>
     """,
     unsafe_allow_html=True,
 )

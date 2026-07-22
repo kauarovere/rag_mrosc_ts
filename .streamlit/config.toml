@@ -1,6 +1,6 @@
 [theme]
-primaryColor      = "#8b55d8"   # roxo — cor do slider, radio buttons, checkboxes
-backgroundColor   = "#ffffff"
-secondaryBackgroundColor = "#f4f6f9"
-textColor         = "#0d3145"   # azul escuro
-font              = "sans serif"
+primaryColor             = "#a78bfa"   # roxo claro — slider, radio, checkboxes
+backgroundColor          = "#1c1c1c"   # carvão escuro — fundo principal (estilo Claude)
+secondaryBackgroundColor = "#252525"   # carvão médio — sidebar, cards
+textColor                = "#e8e6e1"   # off-white quente — texto principal
+font                     = "sans serif"
