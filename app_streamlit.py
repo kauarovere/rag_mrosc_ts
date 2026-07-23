@@ -313,6 +313,76 @@ st.markdown(
     /* Remove qualquer vermelho residual do Streamlit */
     textarea:focus {{ outline-color: {ROXO} !important; }}
 
+    /* ── Oculta avatares do chat de forma agressiva ── */
+    div[data-testid="stChatMessage"] > div:first-child,
+    div[data-testid="stChatMessageAvatar"],
+    .stChatMessageAvatar,
+    .stAvatar,
+    div[class*="stAvatar"] {{
+        display: none !important;
+    }}
+
+    /* ── Estilo Chat Bubble (ChatGPT/Claude) ── */
+    div[data-testid="stChatMessage"] {{
+        background-color: transparent !important;
+        gap: 0 !important;
+    }}
+
+    .user-msg-marker, .assistant-msg-marker {{
+        display: none !important;
+    }}
+
+    div[data-testid="stChatMessage"]:has(.user-msg-marker) {{
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        width: 100% !important;
+    }}
+    
+    div[data-testid="stChatMessage"]:has(.user-msg-marker) > div[data-testid="stChatMessageContent"] {{
+        background-color: #383838 !important;
+        color: #ffffff !important;
+        border-radius: 1.2rem !important;
+        padding: 0.7rem 1.2rem !important;
+        max-width: 75% !important;
+        flex-grow: 0 !important;
+        width: fit-content !important;
+        margin-left: auto !important;
+        margin-right: 0 !important;
+        display: block !important;
+    }}
+
+    /* Remove qualquer margem parasita de todos os níveis internos do Streamlit */
+    div[data-testid="stChatMessage"]:has(.user-msg-marker) > div[data-testid="stChatMessageContent"] .element-container,
+    div[data-testid="stChatMessage"]:has(.user-msg-marker) > div[data-testid="stChatMessageContent"] .stMarkdown,
+    div[data-testid="stChatMessage"]:has(.user-msg-marker) div[data-testid="stMarkdownContainer"],
+    div[data-testid="stChatMessage"]:has(.user-msg-marker) p {{
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.5 !important;
+        text-align: left !important;
+    }}
+    
+    /* Esconde spans e quebras de linha acidentais */
+    div[data-testid="stChatMessage"]:has(.user-msg-marker) br {{
+        display: none !important;
+    }}
+
+    div[data-testid="stChatMessage"]:has(.assistant-msg-marker) {{
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+    }}
+
+    div[data-testid="stChatMessage"]:has(.assistant-msg-marker) > div[data-testid="stChatMessageContent"] {{
+        padding: 0.5rem 0 !important;
+        max-width: 90% !important;
+        flex-grow: 1 !important;
+        margin-left: 0 !important;
+    }}
+
     /* ── Slider — accent-color é a forma mais confiável no Streamlit ── */
     [data-testid="stSlider"] input[type="range"] {{
         accent-color: {ROXO} !important;
@@ -547,9 +617,10 @@ def render_chat_history():
 
         if role == "user":
             with st.chat_message("user"):
-                st.markdown(content)
+                st.markdown(f'<span class="user-msg-marker"></span>{content}', unsafe_allow_html=True)
         else:
             with st.chat_message("assistant"):
+                st.markdown('<div class="assistant-msg-marker"></div>', unsafe_allow_html=True)
                 from src.rag_chain import has_base_in_documents
 
                 if not has_base_in_documents(content):
@@ -672,10 +743,12 @@ if not st.session_state["messages"]:
 render_chat_history()
 
 input_value = st.session_state.pop("input_question", "")
-
-if question := st.chat_input(
+chat_val = st.chat_input(
     "Digite sua pergunta sobre a Lei MROSC ou o Decreto Municipal...",
-):
+)
+question = chat_val or input_value
+
+if question:
     chain = get_or_init_chain(selected_provider, k_chunks)
 
     if chain is None:
@@ -684,9 +757,10 @@ if question := st.chat_input(
     st.session_state["messages"].append({"role": "user", "content": question})
 
     with st.chat_message("user"):
-        st.markdown(question)
+        st.markdown(f'<span class="user-msg-marker"></span>{question}', unsafe_allow_html=True)
 
     with st.chat_message("assistant"):
+        st.markdown('<div class="assistant-msg-marker"></div>', unsafe_allow_html=True)
         with st.spinner("Consultando os documentos jurídicos..."):
             try:
                 from src.rag_chain import ask, has_base_in_documents
@@ -734,13 +808,6 @@ if question := st.chat_input(
             "source_documents": source_docs,
         }
     )
-
-# Suporte a pergunta via botão da sidebar
-if input_value and input_value not in [
-    m["content"] for m in st.session_state["messages"] if m["role"] == "user"
-]:
-    st.session_state["messages"].append({"role": "user", "content": input_value})
-    st.rerun()
 
 # ---------------------------------------------------------------------------
 # Botão limpar conversa
