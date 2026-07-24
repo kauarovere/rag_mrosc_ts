@@ -27,7 +27,7 @@ load_dotenv()
 FAISS_PERSIST_DIR = os.getenv("FAISS_PERSIST_DIR", "./faiss_index")
 EMBEDDING_MODEL = os.getenv(
     "EMBEDDING_MODEL",
-    "intfloat/multilingual-e5-large",
+    "intfloat/multilingual-e5-small",  # small (~118M params) cabe confortavelmente em 512MB de RAM
 )
 
 # Normaliza o caminho relativo ao diretório raiz do projeto
@@ -39,6 +39,10 @@ def get_embeddings() -> HuggingFaceEmbeddings:
     """
     Cria o objeto de embeddings com o modelo multilíngue selecionado.
     O modelo é baixado e cacheado localmente na 1ª execução.
+
+    Nota: este decorador só tem efeito quando chamado a partir de um contexto
+    Streamlit. Para uso fora do Streamlit (ingest.py, cli.py), o comportamento
+    é idêntico ao de uma função normal.
     """
     print(f"   Modelo de embeddings: {EMBEDDING_MODEL}")
     return HuggingFaceEmbeddings(

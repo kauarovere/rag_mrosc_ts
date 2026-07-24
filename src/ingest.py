@@ -365,7 +365,7 @@ def run_ingest_pipeline():
         sys.exit(1)
 
     print(f"\n📊 Total de chunks a indexar: {len(docs)}")
-    print("\n🔢 Gerando embeddings e indexando no Chroma ...")
+    print("\n🔢 Gerando embeddings e indexando no FAISS ...")
     print(
         "   (O download do modelo de embeddings pode levar alguns minutos na 1ª execução)\n"
     )
@@ -374,7 +374,7 @@ def run_ingest_pipeline():
 
     print(f"\n✅ Ingestão concluída! Vector store salvo em: {os.getenv('FAISS_PERSIST_DIR', './faiss_index')}")
     print("\nAgora você pode rodar:")
-    print("  streamlit run app_streamlit.py    # interface principal")
+    print("  streamlit run app.py             # interface principal")
     print("  python src/cli.py                 # debug via terminal")
     print("=" * 60)
 

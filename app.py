@@ -529,43 +529,40 @@ with st.sidebar:
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
-if "chain" not in st.session_state:
-    st.session_state["chain"] = None
 
-if "chain_provider" not in st.session_state:
-    st.session_state["chain_provider"] = None
+@st.cache_resource(show_spinner=False)
+def _build_chain_cached(provider: str, k: int):
+    """
+    Constrói e armazena a RAG chain em cache no nível do servidor.
 
-if "chain_k" not in st.session_state:
-    st.session_state["chain_k"] = None
+    @st.cache_resource garante que o modelo de embeddings e o índice FAISS
+    são carregados UMA ÚNICA VEZ por processo do servidor — mesmo que múltiplos
+    usuários acessem a aplicação ao mesmo tempo. Isso é fundamental para caber
+    nos 512 MB de RAM do plano gratuito do Render.
+
+    O cache é invalidado automaticamente se `provider` ou `k` mudarem.
+    """
+    from src.rag_chain import build_rag_chain
+    return build_rag_chain(provider=provider, k=k)
 
 
 def get_or_init_chain(provider: str, k: int):
     """Carrega ou reutiliza a chain (evita reinicializar a cada mensagem)."""
-    if (
-        st.session_state["chain"] is None
-        or st.session_state["chain_provider"] != provider
-        or st.session_state["chain_k"] != k
+    with st.spinner(
+        "Inicializando modelo de embeddings e chain — aguarde alguns instantes..."
     ):
-        with st.spinner(
-            "Inicializando modelo de embeddings e chain — aguarde alguns instantes..."
-        ):
-            try:
-                from src.rag_chain import build_rag_chain
-                st.session_state["chain"] = build_rag_chain(provider=provider, k=k)
-                st.session_state["chain_provider"] = provider
-                st.session_state["chain_k"] = k
-            except RuntimeError as e:
-                st.error(
-                    f"**Vector store não encontrado.**\n\n"
-                    f"Execute primeiro no terminal:\n```\npython src/ingest.py\n```\n\n"
-                    f"Detalhes: {e}"
-                )
-                return None
-            except Exception as e:
-                st.error(f"Erro ao inicializar a chain: {e}")
-                return None
-
-    return st.session_state["chain"]
+        try:
+            return _build_chain_cached(provider, k)
+        except RuntimeError as e:
+            st.error(
+                f"**Vector store não encontrado.**\n\n"
+                f"Execute primeiro no terminal:\n```\npython src/ingest.py\n```\n\n"
+                f"Detalhes: {e}"
+            )
+            return None
+        except Exception as e:
+            st.error(f"Erro ao inicializar a chain: {e}")
+            return None
 
 
 # ---------------------------------------------------------------------------
