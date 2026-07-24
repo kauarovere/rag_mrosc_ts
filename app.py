@@ -438,25 +438,25 @@ with st.sidebar:
     st.markdown("### Configurações")
 
     provider_options = {
-        "Ollama — local, sem chave": "ollama",
-        "Groq — API gratuita": "groq",
-        "Google Gemini — API gratuita": "gemini",
+        "Ollama": "ollama",
+        "Groq": "groq",
+        "Google Gemini": "gemini",
     }
     selected_label = st.selectbox(
         "Provedor de LLM",
         options=list(provider_options.keys()),
         index=1,
-        help="Ollama roda localmente e não precisa de chave de API. Groq e Gemini requerem chave configurada no .env.",
+        help="Escolha a linguagem que deseja utilizar: Groq, Gemini ou Ollama.",
     )
     selected_provider = provider_options[selected_label]
 
     k_chunks = st.slider(
-        "Trechos recuperados por consulta",
+        "Fontes desejáveis por consulta",
         min_value=2,
         max_value=12,
         value=6,
         step=1,
-        help="Quantidade de trechos legais usados como contexto. Valores maiores geram respostas mais completas, mas mais lentas.",
+        help="Quantidade de trechos legais usados como contexto. Valores maiores geram respostas mais completas, porém mais lentas.",
     )
 
     st.divider()
@@ -490,6 +490,33 @@ with st.sidebar:
         if st.button(q, use_container_width=True, key=f"example_{q[:20]}"):
             st.session_state["input_question"] = q
             st.rerun()
+
+    st.divider()
+    st.markdown("### Adicionar Documentos")
+    uploaded_files = st.file_uploader(
+        "Faça upload de PDFs ou DOCXs",
+        type=["pdf", "docx"],
+        accept_multiple_files=True,
+    )
+    
+    if uploaded_files:
+        if st.button("Salvar e Processar Arquivos", use_container_width=True):
+            with st.spinner("Processando e gerando embeddings (isso pode demorar um pouco)..."):
+                import subprocess
+                data_dir = Path("data")
+                data_dir.mkdir(exist_ok=True)
+                
+                for uploaded_file in uploaded_files:
+                    file_path = data_dir / uploaded_file.name
+                    with open(file_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                
+                try:
+                    subprocess.run([sys.executable, "src/ingest.py"], check=True)
+                    st.session_state["chain"] = None # força recarregar a chain
+                    st.success("✅ Banco atualizado! O RAG já está ciente dos novos documentos.")
+                except subprocess.CalledProcessError as e:
+                    st.error(f"Erro durante a ingestão: {e}")
 
     st.divider()
     st.caption(

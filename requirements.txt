@@ -7,7 +7,6 @@
 langchain>=0.3.0,<0.4.0
 langchain-community>=0.3.0,<0.4.0
 langchain-huggingface>=0.1.0,<0.2.0
-langchain-chroma>=0.2.0,<0.3.0
 langchain-ollama>=0.3.0,<0.4.0
 
 # --- Provedores de API opcionais (gratuitos, com chave) ---
@@ -21,7 +20,7 @@ sentence-transformers>=3.0.0,<4.0.0
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 # --- Vector store ---
-chromadb>=0.6.0,<0.7.0
+faiss-cpu>=1.7.0,<2.0.0
 
 # --- Carregamento de documentos ---
 python-docx>=1.1.0,<2.0.0

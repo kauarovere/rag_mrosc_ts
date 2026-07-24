@@ -372,7 +372,7 @@ def run_ingest_pipeline():
 
     vectorstore = build_vectorstore(docs)
 
-    print(f"\n✅ Ingestão concluída! Vector store salvo em: {os.getenv('CHROMA_PERSIST_DIR', './chroma_db')}")
+    print(f"\n✅ Ingestão concluída! Vector store salvo em: {os.getenv('FAISS_PERSIST_DIR', './faiss_index')}")
     print("\nAgora você pode rodar:")
     print("  streamlit run app_streamlit.py    # interface principal")
     print("  python src/cli.py                 # debug via terminal")
