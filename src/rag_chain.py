@@ -94,8 +94,8 @@ def format_documents_with_metadata(docs: list[Document]) -> str:
 
         tipo = meta.get("tipo", "desconhecido")
 
-        # Formatação diferente para Leis vs FAQs
-        if tipo == "faq":
+        # Formatação diferente para Leis vs Docs Complementares
+        if tipo in ["faq", "manual", "glossário", "documento_complementar"]:
             header = f"[Trecho {i}] Material Complementar: {fonte} — {artigo}"
         else:
             # Aviso se o artigo estiver revogado ou alterado

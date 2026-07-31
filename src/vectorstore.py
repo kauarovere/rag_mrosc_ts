@@ -115,6 +115,6 @@ def get_retriever(
     """
     vectorstore = load_vectorstore(persist_dir)
     return vectorstore.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": k},
+        search_type="mmr",
+        search_kwargs={"k": k, "fetch_k": k * 4},
     )
