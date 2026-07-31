@@ -577,7 +577,12 @@ def render_source_badges(meta: dict) -> str:
 
     badge_class = "badge--decreto" if "Decreto" in fonte else "badge--lei"
     html = f'<span class="badge {badge_class}">{fonte}</span>'
-    html += f'<span class="badge badge--artigo">Art. {artigo}</span>'
+    
+    tipo = meta.get("tipo", "desconhecido")
+    if tipo in ["lei_federal", "decreto_municipal"]:
+        html += f'<span class="badge badge--artigo">Art. {artigo}</span>'
+    else:
+        html += f'<span class="badge badge--artigo">{artigo}</span>'
 
     if status == "revogado":
         html += '<span class="badge badge--revogado">Revogado</span>'
