@@ -309,40 +309,56 @@ def ingest_documents(
                 f"{', '.join(d.metadata['artigo'] for d in alterados)}"
             )
 
-    # --- Documentos Complementares / FAQs ---
+    # --- Documentos Complementares / FAQs / Manuais ---
     data_dir = DATA_DIR
-    print(f"\n🔎 Buscando Documentos Complementares (FAQs) em {data_dir.name}/ ...")
-    faq_files = [
+    print(f"\n🔎 Buscando Documentos Complementares em {data_dir.name}/ ...")
+    complementares_files = [
         f for f in data_dir.iterdir() 
         if f.is_file() and f.suffix.lower() in [".docx", ".pdf"] and f not in [LEI_FILE, DECRETO_FILE]
     ]
     
-    if not faq_files:
+    if not complementares_files:
         print("   Nenhum documento complementar encontrado.")
     else:
-        for faq_file in faq_files:
-            print(f"📄 Carregando FAQ: {faq_file.name} ...")
-            if faq_file.suffix.lower() == ".docx":
-                faq_text = load_docx(faq_file)
+        for comp_file in complementares_files:
+            print(f"📄 Carregando Documento: {comp_file.name} ...")
+            if comp_file.suffix.lower() == ".docx":
+                comp_text = load_docx(comp_file)
             else:
-                faq_text = load_pdf(faq_file)
+                comp_text = load_pdf(comp_file)
             
-            faq_chunks = faq_splitter.split_text(faq_text)
-            faq_docs = []
-            for i, chunk in enumerate(faq_chunks):
-                faq_docs.append(
+            comp_chunks = faq_splitter.split_text(comp_text)
+            comp_docs = []
+            
+            # Define o tipo com base no nome do arquivo
+            name_lower = comp_file.name.lower()
+            if "manual" in name_lower:
+                tipo_doc = "manual"
+                prefix_artigo = "Manual Parte"
+            elif "faq" in name_lower:
+                tipo_doc = "faq"
+                prefix_artigo = "FAQ Parte"
+            elif "glossário" in name_lower or "glossario" in name_lower:
+                tipo_doc = "glossário"
+                prefix_artigo = "Glossário Parte"
+            else:
+                tipo_doc = "documento_complementar"
+                prefix_artigo = "Doc Parte"
+
+            for i, chunk in enumerate(comp_chunks):
+                comp_docs.append(
                     Document(
                         page_content=chunk.strip(),
                         metadata={
-                            "fonte": faq_file.name,
-                            "tipo": "faq",
-                            "artigo": f"FAQ Parte {i+1}",
+                            "fonte": comp_file.name,
+                            "tipo": tipo_doc,
+                            "artigo": f"{prefix_artigo} {i+1}",
                             "status": "vigente"
                         }
                     )
                 )
-            all_documents.extend(faq_docs)
-            print(f"   ✅ {len(faq_docs)} chunks gerados de {faq_file.name}")
+            all_documents.extend(comp_docs)
+            print(f"   ✅ {len(comp_docs)} chunks gerados de {comp_file.name}")
 
     return all_documents
 
