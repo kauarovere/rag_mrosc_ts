@@ -459,25 +459,8 @@ with st.sidebar:
         help="Quantidade de trechos legais usados como contexto. Valores maiores geram respostas mais completas, porém mais lentas.",
     )
 
-    st.divider()
-    st.markdown("### Base de conhecimento")
-    st.markdown(
-        f"""
-        <div style="font-size:0.82rem; color:#3d4a5c; line-height:2;">
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; overflow:hidden;">
-                <span style="width:10px; height:10px; border-radius:50%; background:{ROXO}; flex-shrink:0; display:inline-block;"></span>
-                <span>Lei Federal 13.019/2014 (MROSC)</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; margin-top:4px;">
-                <span style="width:10px; height:10px; border-radius:50%; background:{AMARELO}; flex-shrink:0; display:inline-block;"></span>
-                <span>Decreto Municipal 57.575/2016 (SP)</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
-    st.divider()
+
     st.markdown("### Perguntas sugeridas")
     example_questions = [
         "O que é um termo de fomento?",
