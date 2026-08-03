@@ -790,7 +790,7 @@ if question:
 
     with st.chat_message("assistant"):
         st.markdown('<div class="assistant-msg-marker"></div>', unsafe_allow_html=True)
-        with st.spinner("Consultando os documentos jurídicos..."):
+        with st.spinner("Pensando"):
             try:
                 from src.rag_chain import ask, has_base_in_documents
 
