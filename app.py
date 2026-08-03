@@ -712,9 +712,9 @@ if not st.session_state["messages"]:
             </p>
         </div>
         <script>
-            var part1 = "O que est\u00e1 buscando no ";
-            var part2 = "MROSC";
-            var part3 = " hoje?";
+            var part1 = "No que posso ajudar hoje?";
+            var part2 = "";
+            var part3 = "";
             var p1 = document.getElementById('p1');
             var p2 = document.getElementById('p2');
             var p3 = document.getElementById('p3');
