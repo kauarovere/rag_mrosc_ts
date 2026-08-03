@@ -438,15 +438,14 @@ with st.sidebar:
     st.markdown("### Configurações")
 
     provider_options = {
-        "Ollama": "ollama",
         "Groq": "groq",
         "Google Gemini": "gemini",
     }
     selected_label = st.selectbox(
         "Provedor de LLM",
         options=list(provider_options.keys()),
-        index=1,
-        help="Escolha a linguagem que deseja utilizar: Groq, Gemini ou Ollama.",
+        index=0,
+        help="Escolha o modelo de linguagem: Groq ou Google Gemini.",
     )
     selected_provider = provider_options[selected_label]
 
