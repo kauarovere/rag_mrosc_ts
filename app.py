@@ -710,7 +710,6 @@ if not st.session_state["messages"]:
             <p class="greeting">
                 <span id="p1"></span><span id="p2" class="mrosc"></span><span id="p3"></span><span class="cursor">|</span>
             </p>
-            <p class="sub" id="sub">Fa&ccedil;a sua pergunta sobre a Lei 13.019/2014 ou o Decreto Municipal 57.575/2016</p>
         </div>
         <script>
             var part1 = "O que est\u00e1 buscando no ";
