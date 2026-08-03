@@ -549,7 +549,7 @@ def _build_chain_cached(provider: str, k: int):
 def get_or_init_chain(provider: str, k: int):
     """Carrega ou reutiliza a chain (evita reinicializar a cada mensagem)."""
     with st.spinner(
-        "Inicializando modelo de embeddings e chain — aguarde alguns instantes..."
+        "Pensando"
     ):
         try:
             return _build_chain_cached(provider, k)
