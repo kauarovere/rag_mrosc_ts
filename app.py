@@ -796,6 +796,14 @@ if question:
 
                 result = ask(chain, question)
                 answer = result["answer"]
+                # Remove aviso jurídico gerado pelo LLM (mesmo sem instrução no prompt)
+                import re as _re
+                answer = _re.sub(
+                    r"\u26a0\ufe0f?\s*\*?Esta resposta[^\n]*análise jurídica profissional\.?\*?",
+                    "",
+                    answer,
+                    flags=_re.IGNORECASE,
+                ).strip()
                 source_docs = result.get("source_documents", [])
 
             except Exception as e:
