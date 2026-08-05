@@ -429,12 +429,13 @@ st.markdown(
 params = st.query_params
 if "code" in params and not is_authenticated(st.session_state):
     auth_data = exchange_code_for_session(params["code"])
-    if auth_data:
+    if auth_data and "error" not in auth_data:
         st.session_state["auth_user"] = auth_data
         st.query_params.clear()
         st.rerun()
     else:
-        st.error("Falha na autenticação. Tente novamente.")
+        error_msg = auth_data.get("error", "Erro desconhecido") if auth_data else "Erro desconhecido"
+        st.error(f"Falha na autenticação: {error_msg}")
         st.stop()
 
 if not is_authenticated(st.session_state):

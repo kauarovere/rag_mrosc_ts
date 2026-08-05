@@ -69,7 +69,7 @@ def exchange_code_for_session(code: str) -> Optional[dict]:
             ),
         }
     except Exception as e:
-        return None
+        return {"error": str(e)}
 
 
 def sign_out() -> None:
