@@ -474,25 +474,30 @@ if not is_authenticated(st.session_state):
             display: inline-flex;
             align-items: center;
             gap: 12px;
-            background: {ROXO};
-            color: #fff;
+            background: #202124;
+            border: 1px solid #5f6368;
+            color: #e8eaed;
             font-size: 1rem;
-            font-weight: 600;
-            padding: 14px 32px;
-            border-radius: 12px;
+            font-weight: 500;
+            padding: 10px 24px;
+            border-radius: 9999px;
             text-decoration: none;
-            transition: background 0.2s;
+            transition: background 0.2s, border-color 0.2s;
         }}
-        .login-btn:hover {{ background: {ROXO_D}; }}
+        .login-btn:hover {{ background: #303134; border-color: #8ab4f8; color: #fff; text-decoration: none; }}
         </style>
         <div class="login-wrap">
             <div class="login-title">Parcer<span class="ia">IA</span></div>
             <div class="login-sub">Consultor jurídico inteligente para o MROSC.<br>Faça login para continuar.</div>
             <a class="login-btn" href="{oauth_url}" target="_blank">
                 <svg width="20" height="20" viewBox="0 0 48 48">
-                    <path fill="#FFF" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                    <path fill="none" d="M0 0h48v48H0z"/>
                 </svg>
-                Entrar com Google
+                Continuar com o Google
             </a>
         </div>
         """,
