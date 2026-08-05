@@ -12,6 +12,7 @@ Fluxo:
 """
 
 import os
+import urllib.parse
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -45,12 +46,30 @@ def get_google_oauth_url() -> str:
             },
         }
     )
+    
+    storage_key = f"{supabase.auth._storage_key}-code-verifier"
+    code_verifier = supabase.auth._storage.get_item(storage_key)
+    
+    if code_verifier:
+        parsed = urllib.parse.urlparse(response.url)
+        q = urllib.parse.parse_qs(parsed.query)
+        if "redirect_to" in q:
+            separator = "&" if "?" in q["redirect_to"][0] else "?"
+            q["redirect_to"][0] += f"{separator}cv={code_verifier}"
+            new_query = urllib.parse.urlencode(q, doseq=True)
+            return urllib.parse.urlunparse(parsed._replace(query=new_query))
+            
     return response.url
 
 
-def exchange_code_for_session(code: str) -> Optional[dict]:
+def exchange_code_for_session(code: str, code_verifier: str = None) -> Optional[dict]:
     """Troca o código OAuth por uma sessão Supabase."""
     supabase = get_supabase()
+    
+    if code_verifier:
+        storage_key = f"{supabase.auth._storage_key}-code-verifier"
+        supabase.auth._storage.set_item(storage_key, code_verifier)
+        
     try:
         response = supabase.auth.exchange_code_for_session({"auth_code": code})
         return {

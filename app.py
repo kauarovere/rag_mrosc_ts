@@ -428,7 +428,8 @@ st.markdown(
 # ---------------------------------------------------------------------------
 params = st.query_params
 if "code" in params and not is_authenticated(st.session_state):
-    auth_data = exchange_code_for_session(params["code"])
+    code_verifier = params.get("cv", None)
+    auth_data = exchange_code_for_session(params["code"], code_verifier)
     if auth_data and "error" not in auth_data:
         st.session_state["auth_user"] = auth_data
         st.query_params.clear()
