@@ -568,7 +568,7 @@ LOGO_B64 = "iVBORw0KGgoAAAANSUhEUgAAADAAAAAiCAYAAAAZHFoXAAAIF0lEQVR4nL1YfYxdRRWf
 with st.sidebar:
     st.markdown(
         f"""
-        <div style="display:flex; justify-content:flex-start; margin-bottom: 24px; margin-top: 10px;">
+        <div style="display:flex; justify-content:flex-start; margin-bottom: 48px; margin-top: -30px;">
             <img src="data:image/png;base64,{LOGO_B64}" width="40" height="40" style="opacity: 0.9;">
         </div>
         """,
