@@ -558,9 +558,22 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
+# Logo Base64
+# ---------------------------------------------------------------------------
+LOGO_B64 = "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"
+
+# ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
 with st.sidebar:
+    st.markdown(
+        f"""
+        <div style="display:flex; justify-content:flex-start; margin-bottom: 24px; margin-top: 10px;">
+            <img src="data:image/png;base64,{LOGO_B64}" width="40" height="40" style="opacity: 0.9;">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     # ── Usuário logado ────────────────────────────────────────────────
     user = st.session_state.get("auth_user", {})
     user_name = user.get("name", "") or user.get("email", "Usuário")
