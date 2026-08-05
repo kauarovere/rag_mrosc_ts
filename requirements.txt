@@ -29,6 +29,9 @@ pypdf>=4.3.0,<6.0.0
 # --- Interface Streamlit ---
 streamlit>=1.38.0,<2.0.0
 
+# --- Autenticação ---
+supabase>=2.0.0,<3.0.0
+
 # --- Utilitários ---
 python-dotenv>=1.0.0,<2.0.0
 rich>=13.0.0,<14.0.0          # output bonito no terminal (CLI)

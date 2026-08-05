@@ -17,6 +17,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 import streamlit as st
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
+from src.auth import (
+    exchange_code_for_session,
+    get_google_oauth_url,
+    is_authenticated,
+    sign_out,
+)
 
 load_dotenv()
 
@@ -418,7 +424,82 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# Cabeçalho
+# Autenticação — troca code OAuth por sessão
+# ---------------------------------------------------------------------------
+params = st.query_params
+if "code" in params and not is_authenticated(st.session_state):
+    auth_data = exchange_code_for_session(params["code"])
+    if auth_data:
+        st.session_state["auth_user"] = auth_data
+        st.query_params.clear()
+        st.rerun()
+    else:
+        st.error("Falha na autenticação. Tente novamente.")
+        st.stop()
+
+if not is_authenticated(st.session_state):
+    # ── Tela de Login ─────────────────────────────────────────────────────
+    try:
+        oauth_url = get_google_oauth_url()
+    except Exception:
+        oauth_url = ""
+
+    st.markdown(
+        f"""
+        <style>
+        .login-wrap {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 70vh;
+            gap: 24px;
+            text-align: center;
+        }}
+        .login-title {{
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: {TEXTO};
+            line-height: 1.2;
+        }}
+        .login-title .ia {{ color: {ROXO}; font-style: italic; }}
+        .login-sub {{
+            font-size: 1rem;
+            color: {TEXTO_S};
+            max-width: 400px;
+        }}
+        .login-btn {{
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: {ROXO};
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 14px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }}
+        .login-btn:hover {{ background: {ROXO_D}; }}
+        </style>
+        <div class="login-wrap">
+            <div class="login-title">Parcer<span class="ia">IA</span></div>
+            <div class="login-sub">Consultor jurídico inteligente para o MROSC.<br>Faça login para continuar.</div>
+            <a class="login-btn" href="{oauth_url}">
+                <svg width="20" height="20" viewBox="0 0 48 48">
+                    <path fill="#FFF" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+                </svg>
+                Entrar com Google
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Cabeçalho (só exibido após login)
 # ---------------------------------------------------------------------------
 st.markdown(
     """
@@ -435,6 +516,26 @@ st.markdown(
 # Sidebar
 # ---------------------------------------------------------------------------
 with st.sidebar:
+    # ── Usuário logado ────────────────────────────────────────────────
+    user = st.session_state.get("auth_user", {})
+    user_name = user.get("name", "") or user.get("email", "Usuário")
+    user_email = user.get("email", "")
+    st.markdown(
+        f"""
+        <div style="display:flex; align-items:center; gap:10px; padding:4px 0 12px;">
+            <div style="flex:1; min-width:0;">
+                <div style="font-weight:600; font-size:0.88rem; color:{TEXTO}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{user_name}</div>
+                <div style="font-size:0.75rem; color:{TEXTO_S}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{user_email}</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Sair", use_container_width=True):
+        sign_out()
+        st.session_state.clear()
+        st.rerun()
+    st.divider()
     st.markdown("### Configurações")
 
     provider_options = {
