@@ -485,6 +485,36 @@ if not is_authenticated(st.session_state):
             transition: background 0.2s, border-color 0.2s;
         }}
         .login-btn:hover {{ background: #303134; border-color: #8ab4f8; color: #ffffff !important; text-decoration: none !important; }}
+        .login-footer {
+            position: fixed;
+            bottom: 32px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .login-footer img {
+            width: 32px;
+            height: 32px;
+            opacity: 0.9;
+        }
+        .footer-links {
+            display: flex;
+            gap: 12px;
+            font-size: 0.85rem;
+            color: #9aa0a6;
+        }
+        .footer-links a {
+            color: #9aa0a6;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .footer-links a:hover {
+            color: #e8eaed;
+            text-decoration: underline;
+        }
         </style>
         <div class="login-wrap">
             <div class="login-title">Parcer<span class="ia">IA</span></div>
@@ -499,6 +529,14 @@ if not is_authenticated(st.session_state):
                 </svg>
                 Continuar com o Google
             </a>
+        </div>
+        <div class="login-footer">
+            <img src="data:image/png;base64,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" alt="Logo ParcerIA">
+            <div class="footer-links">
+                <a href="#">Termos de uso</a>
+                <span>|</span>
+                <a href="#">Política de privacidade</a>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
