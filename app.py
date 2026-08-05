@@ -485,7 +485,7 @@ if not is_authenticated(st.session_state):
             transition: background 0.2s, border-color 0.2s;
         }}
         .login-btn:hover {{ background: #303134; border-color: #8ab4f8; color: #ffffff !important; text-decoration: none !important; }}
-        .login-footer {
+        .login-footer {{
             position: fixed;
             bottom: 32px;
             left: 0;
@@ -494,27 +494,27 @@ if not is_authenticated(st.session_state):
             flex-direction: column;
             align-items: center;
             gap: 16px;
-        }
-        .login-footer img {
+        }}
+        .login-footer img {{
             width: 32px;
             height: 32px;
             opacity: 0.9;
-        }
-        .footer-links {
+        }}
+        .footer-links {{
             display: flex;
             gap: 12px;
             font-size: 0.85rem;
             color: #9aa0a6;
-        }
-        .footer-links a {
+        }}
+        .footer-links a {{
             color: #9aa0a6;
             text-decoration: none;
             transition: color 0.2s;
-        }
-        .footer-links a:hover {
+        }}
+        .footer-links a:hover {{
             color: #e8eaed;
             text-decoration: underline;
-        }
+        }}
         </style>
         <div class="login-wrap">
             <div class="login-title">Parcer<span class="ia">IA</span></div>
