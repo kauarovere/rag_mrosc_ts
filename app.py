@@ -80,7 +80,11 @@ st.markdown(
 
     /* ── Oculta o header nativo, mas mantém visível a seta da barra lateral ── */
     [data-testid="stHeader"] {{ visibility: hidden !important; background: transparent !important; }}
-    [data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"] {{ visibility: visible !important; }}
+    [data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"] {{
+        visibility: visible !important;
+        z-index: 99999999 !important;
+        position: relative !important;
+    }}
     [data-testid="stToolbar"] {{ display: none !important; }}
     .stAppDeployButton {{ display: none !important; }}
     /* ── Nossa topbar (substitui o header do Streamlit) ── */
