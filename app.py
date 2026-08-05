@@ -78,10 +78,10 @@ st.markdown(
     /* ── Background global dark ── */
     .stApp, html, body {{ background-color: {FUNDO} !important; }}
 
-    /* ── Oculta o header nativo do Streamlit, mas preserva o botão da sidebar ── */
-    [data-testid="stHeader"] {{ background: transparent !important; }}
-    [data-testid="stHeader"] > div:not([data-testid="collapsedControl"]) {{ display: none !important; }}
+    /* ── Oculta os itens do header nativo, mas preserva o botão da sidebar ── */
+    [data-testid="stHeader"] {{ background: transparent !important; box-shadow: none !important; }}
     [data-testid="stToolbar"] {{ display: none !important; }}
+    .stAppDeployButton {{ display: none !important; }}
     /* ── Nossa topbar (substitui o header do Streamlit) ── */
     .parceria-topbar {{
         position: fixed;
