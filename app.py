@@ -14,8 +14,10 @@ from pathlib import Path
 # Garante que o diretório raiz está no path para imports absolutos
 sys.path.insert(0, str(Path(__file__).parent))
 
+import json
 import streamlit as st
 import streamlit.components.v1 as components
+import extra_streamlit_components as stx
 from dotenv import load_dotenv
 from src.auth import (
     exchange_code_for_session,
@@ -430,14 +432,38 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# Autenticação — troca code OAuth por sessão
+# Cookie Manager — persistência da sessão entre refreshes
 # ---------------------------------------------------------------------------
+cookie_manager = stx.CookieManager()
+
+# ---------------------------------------------------------------------------
+# Autenticação — restaura sessão do cookie se existir
+# ---------------------------------------------------------------------------
+if not is_authenticated(st.session_state):
+    saved = cookie_manager.get(cookie="parceria_session")
+    if saved:
+        try:
+            if isinstance(saved, str):
+                saved = json.loads(saved)
+            st.session_state["auth_user"] = saved
+            st.rerun()
+        except Exception:
+            pass
+
+# Autenticação — troca code OAuth por sessão
 params = st.query_params
 if "code" in params and not is_authenticated(st.session_state):
     code_verifier = params.get("cv", None)
     auth_data = exchange_code_for_session(params["code"], code_verifier)
     if auth_data and "error" not in auth_data:
         st.session_state["auth_user"] = auth_data
+        # Salva dados serializáveis no cookie (30 dias)
+        cookie_data = {
+            "email": auth_data.get("email", ""),
+            "name": auth_data.get("name", ""),
+            "avatar": auth_data.get("avatar", ""),
+        }
+        cookie_manager.set("parceria_session", json.dumps(cookie_data), max_age=60*60*24*30)
         st.query_params.clear()
         st.rerun()
     else:
@@ -597,6 +623,7 @@ with st.sidebar:
     )
     if st.button("Sair", use_container_width=True):
         sign_out()
+        cookie_manager.delete("parceria_session")
         st.session_state.clear()
         st.rerun()
     st.divider()
