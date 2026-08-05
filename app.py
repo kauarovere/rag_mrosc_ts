@@ -476,15 +476,15 @@ if not is_authenticated(st.session_state):
             gap: 12px;
             background: #202124;
             border: 1px solid #5f6368;
-            color: #e8eaed;
+            color: #ffffff !important;
             font-size: 1rem;
             font-weight: 500;
             padding: 10px 24px;
             border-radius: 9999px;
-            text-decoration: none;
+            text-decoration: none !important;
             transition: background 0.2s, border-color 0.2s;
         }}
-        .login-btn:hover {{ background: #303134; border-color: #8ab4f8; color: #fff; text-decoration: none; }}
+        .login-btn:hover {{ background: #303134; border-color: #8ab4f8; color: #ffffff !important; text-decoration: none !important; }}
         </style>
         <div class="login-wrap">
             <div class="login-title">Parcer<span class="ia">IA</span></div>
