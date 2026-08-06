@@ -79,10 +79,23 @@ st.markdown(
     /* ── Background global dark ── */
     .stApp, html, body {{ background-color: {FUNDO} !important; }}
 
-    /* ── Oculta apenas toolbar e deploy, preserva o botão da sidebar ── */
+    /* ── Header Nativo e Seta da Sidebar ── */
     [data-testid="stToolbar"] {{ display: none !important; }}
     .stAppDeployButton {{ display: none !important; }}
-    [data-testid="stHeader"] {{ background: transparent !important; border: none !important; box-shadow: none !important; }}
+    [data-testid="stHeader"] {{
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }}
+    [data-testid="collapsedControl"] {{
+        visibility: visible !important;
+        pointer-events: auto !important;
+        z-index: 99999999 !important;
+        color: {TEXTO} !important;
+    }}
+    [data-testid="stSidebarHeader"] {{
+        visibility: visible !important;
+        display: block !important;
+    }}
     /* ── Nossa topbar (substitui o header do Streamlit) ── */
     .parceria-topbar {{
         position: fixed;
