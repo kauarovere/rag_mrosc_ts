@@ -17,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 import json
 import streamlit as st
 import streamlit.components.v1 as components
-import extra_streamlit_components as stx
 from dotenv import load_dotenv
 from src.auth import (
     exchange_code_for_session,
@@ -80,15 +79,10 @@ st.markdown(
     /* ── Background global dark ── */
     .stApp, html, body {{ background-color: {FUNDO} !important; }}
 
-    /* ── Oculta o header nativo, mas mantém visível a seta da barra lateral ── */
-    [data-testid="stHeader"] {{ visibility: hidden !important; background: transparent !important; }}
-    [data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"] {{
-        visibility: visible !important;
-        z-index: 99999999 !important;
-        position: relative !important;
-    }}
+    /* ── Oculta apenas toolbar e deploy, preserva o botão da sidebar ── */
     [data-testid="stToolbar"] {{ display: none !important; }}
     .stAppDeployButton {{ display: none !important; }}
+    [data-testid="stHeader"] {{ background: transparent !important; border: none !important; box-shadow: none !important; }}
     /* ── Nossa topbar (substitui o header do Streamlit) ── */
     .parceria-topbar {{
         position: fixed;
@@ -432,20 +426,49 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# Cookie Manager — persistência da sessão entre refreshes
+# Funções auxiliares para cookies via JavaScript
 # ---------------------------------------------------------------------------
-cookie_manager = stx.CookieManager()
+def _set_cookie_js(name: str, value: str, max_age: int = 60*60*24*30):
+    """Injeta JS para salvar um cookie no navegador."""
+    escaped = value.replace('\\', '\\\\').replace("'", "\\'")
+    components.html(
+        f"<script>document.cookie='{name}={escaped}; path=/; max-age={max_age}; SameSite=Lax';</script>",
+        height=0,
+    )
+
+def _delete_cookie_js(name: str):
+    """Injeta JS para remover um cookie do navegador."""
+    components.html(
+        f"<script>document.cookie='{name}=; path=/; max-age=0';</script>",
+        height=0,
+    )
+
+def _read_cookie_from_headers(name: str):
+    """Lê um cookie diretamente dos headers HTTP da requisição."""
+    try:
+        from streamlit.web.server.websocket_headers import _get_websocket_headers
+        headers = _get_websocket_headers()
+        if headers:
+            cookie_str = headers.get("Cookie", "")
+            for part in cookie_str.split(";"):
+                part = part.strip()
+                if part.startswith(f"{name}="):
+                    return part[len(name) + 1:]
+    except Exception:
+        pass
+    return None
 
 # ---------------------------------------------------------------------------
 # Autenticação — restaura sessão do cookie se existir
 # ---------------------------------------------------------------------------
 if not is_authenticated(st.session_state):
-    saved = cookie_manager.get(cookie="parceria_session")
-    if saved:
+    saved_cookie = _read_cookie_from_headers("parceria_session")
+    if saved_cookie:
         try:
-            if isinstance(saved, str):
-                saved = json.loads(saved)
-            st.session_state["auth_user"] = saved
+            import urllib.parse as _up
+            decoded = _up.unquote(saved_cookie)
+            data = json.loads(decoded)
+            st.session_state["auth_user"] = data
             st.rerun()
         except Exception:
             pass
@@ -458,12 +481,12 @@ if "code" in params and not is_authenticated(st.session_state):
     if auth_data and "error" not in auth_data:
         st.session_state["auth_user"] = auth_data
         # Salva dados serializáveis no cookie (30 dias)
-        cookie_data = {
+        cookie_data = json.dumps({
             "email": auth_data.get("email", ""),
             "name": auth_data.get("name", ""),
             "avatar": auth_data.get("avatar", ""),
-        }
-        cookie_manager.set("parceria_session", json.dumps(cookie_data), max_age=60*60*24*30)
+        })
+        _set_cookie_js("parceria_session", cookie_data)
         st.query_params.clear()
         st.rerun()
     else:
@@ -623,7 +646,7 @@ with st.sidebar:
     )
     if st.button("Sair", use_container_width=True):
         sign_out()
-        cookie_manager.delete("parceria_session")
+        _delete_cookie_js("parceria_session")
         st.session_state.clear()
         st.rerun()
     st.divider()
