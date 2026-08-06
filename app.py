@@ -439,7 +439,7 @@ def _set_cookie_js(name: str, value: str, max_age: int = 60*60*24*30):
 def _delete_cookie_js(name: str):
     """Injeta JS para remover um cookie do navegador."""
     components.html(
-        f"<script>document.cookie='{name}=; path=/; max-age=0';</script>",
+        f"<script>document.cookie='{name}=; path=/; max-age=0'; window.parent.location.href='/';</script>",
         height=0,
     )
 
@@ -488,7 +488,7 @@ if "code" in params and not is_authenticated(st.session_state):
         })
         _set_cookie_js("parceria_session", cookie_data)
         st.query_params.clear()
-        st.rerun()
+        # Removido st.rerun() propositalmente para evitar falha no JS
     else:
         error_msg = auth_data.get("error", "Erro desconhecido") if auth_data else "Erro desconhecido"
         st.error(f"Falha na autenticação: {error_msg}")
@@ -646,9 +646,9 @@ with st.sidebar:
     )
     if st.button("Sair", use_container_width=True):
         sign_out()
-        _delete_cookie_js("parceria_session")
         st.session_state.clear()
-        st.rerun()
+        _delete_cookie_js("parceria_session")
+        st.stop()  # Aborta execução, o JS recarrega a tela sozinho
     st.divider()
     st.markdown("### Configurações")
 
