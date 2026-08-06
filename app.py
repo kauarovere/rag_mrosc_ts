@@ -1002,8 +1002,13 @@ if question:
         with st.spinner("Pensando"):
             try:
                 from src.rag_chain import ask, has_base_in_documents
+                from src.query_logger import log_query
+                import time as _time
 
+                _t0 = _time.monotonic()
                 result = ask(chain, question)
+                _response_ms = int((_time.monotonic() - _t0) * 1000)
+
                 answer = result["answer"]
                 # Remove aviso jurídico gerado pelo LLM (mesmo sem instrução no prompt)
                 import re as _re
@@ -1014,6 +1019,17 @@ if question:
                     flags=_re.IGNORECASE,
                 ).strip()
                 source_docs = result.get("source_documents", [])
+
+                # Salva a consulta no Supabase (silencioso em caso de falha)
+                _user_email = st.session_state.get("auth_user", {}).get("email")
+                log_query(
+                    user_email=_user_email,
+                    question=question,
+                    answer=answer,
+                    source_docs=source_docs,
+                    llm_provider=selected_provider,
+                    response_ms=_response_ms,
+                )
 
             except Exception as e:
                 answer = f"Erro ao processar a pergunta: {e}"
