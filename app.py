@@ -433,10 +433,83 @@ st.markdown(
         background: {CINZA_F} !important;
         border-radius: 6px !important;
     }}
+    /* ── VLibras Widget — override dark mode ── */
+    /* Garante que o botão flutuante do VLibras fique acima de tudo */
+    [vw] {{ z-index: 9999990 !important; }}
+    [vw-access-button] {{
+        z-index: 9999990 !important;
+    }}
+    [vw-plugin-wrapper] {{
+        z-index: 9999989 !important;
+    }}
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+# ---------------------------------------------------------------------------
+# VLibras — Função reutilizável para injetar o widget em qualquer tela
+# ---------------------------------------------------------------------------
+def _inject_vlibras():
+    """Injeta o widget VLibras no documento principal do Streamlit.
+
+    Usa um iframe inline (via st.markdown + srcdoc) com allow-same-origin +
+    allow-scripts para acessar window.parent e inserir o widget no DOM
+    principal — contornando o sandbox restritivo do components.html().
+    O JS é idempotente: não duplica o widget se já existir.
+    """
+    if st.session_state.get("_vlibras_injected"):
+        return
+    st.session_state["_vlibras_injected"] = True
+
+    vlibras_iframe = """
+    <iframe
+        srcdoc="
+            &lt;script&gt;
+            (function() {
+                var doc = window.parent.document;
+                var win = window.parent;
+
+                if (!doc.querySelector('#vlibras-style')) {
+                    var style = doc.createElement('style');
+                    style.id = 'vlibras-style';
+                    style.textContent = '[vw]{z-index:2147483647!important;position:fixed!important;}[vw-access-button]{z-index:2147483647!important;}[vw-plugin-wrapper]{z-index:2147483646!important;}';
+                    doc.head.appendChild(style);
+                }
+
+                if (!doc.querySelector('[vw]')) {
+                    var div = doc.createElement('div');
+                    div.setAttribute('vw','');
+                    div.className='enabled';
+                    div.innerHTML='&lt;div vw-access-button class=&quot;active&quot;&gt;&lt;/div&gt;&lt;div vw-plugin-wrapper&gt;&lt;div class=&quot;vw-plugin-top-wrapper&quot;&gt;&lt;/div&gt;&lt;/div&gt;';
+                    doc.body.appendChild(div);
+                }
+
+                if (!doc.querySelector('script[data-vlibras]')) {
+                    var s = doc.createElement('script');
+                    s.setAttribute('data-vlibras','1');
+                    s.src='https://vlibras.gov.br/app/vlibras-plugin.js';
+                    s.onload=function(){
+                        if(win.VLibras){
+                            new win.VLibras.Widget({
+                                rootPath:'https://vlibras.gov.br/app',
+                                avatar:'icaro',
+                                position:'R',
+                                opacity:1
+                            });
+                        }
+                    };
+                    doc.body.appendChild(s);
+                }
+            })();
+            &lt;/script&gt;"
+        sandbox="allow-same-origin allow-scripts"
+        style="display:none;width:0;height:0;border:none;"
+        title="VLibras Acessibilidade"
+    ></iframe>
+    """
+    st.markdown(vlibras_iframe, unsafe_allow_html=True)
+
 
 # ---------------------------------------------------------------------------
 # Funções auxiliares para cookies via JavaScript
@@ -609,6 +682,7 @@ if not is_authenticated(st.session_state):
         """,
         unsafe_allow_html=True,
     )
+    _inject_vlibras()  # Disponível também na tela de login
     st.stop()
 
 # ---------------------------------------------------------------------------
@@ -624,6 +698,7 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+_inject_vlibras()  # Disponível na tela principal (pós-login)
 
 # ---------------------------------------------------------------------------
 # Logo Base64
