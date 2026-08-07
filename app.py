@@ -451,65 +451,76 @@ st.markdown(
 # VLibras — Função reutilizável para injetar o widget em qualquer tela
 # ---------------------------------------------------------------------------
 def _inject_vlibras():
-    """Injeta o widget VLibras no documento principal do Streamlit.
+    """Injeta o widget VLibras no DOM principal do Streamlit.
 
-    Usa um iframe inline (via st.markdown + srcdoc) com allow-same-origin +
-    allow-scripts para acessar window.parent e inserir o widget no DOM
-    principal — contornando o sandbox restritivo do components.html().
-    O JS é idempotente: não duplica o widget se já existir.
+    Usa components.html() que cria um iframe com allow-same-origin, permitindo
+    acesso a window.parent.document para inserir o widget no documento principal.
     """
     if st.session_state.get("_vlibras_injected"):
         return
     st.session_state["_vlibras_injected"] = True
 
-    vlibras_iframe = """
-    <iframe
-        srcdoc="
-            &lt;script&gt;
-            (function() {
-                var doc = window.parent.document;
-                var win = window.parent;
+    components.html(
+        """
+        <script>
+        function injectVLibras() {
+            try {
+                var doc  = window.parent.document;
+                var win  = window.parent;
 
+                // Estilo de z-index (evita duplicar)
                 if (!doc.querySelector('#vlibras-style')) {
-                    var style = doc.createElement('style');
-                    style.id = 'vlibras-style';
-                    style.textContent = '[vw]{z-index:2147483647!important;position:fixed!important;}[vw-access-button]{z-index:2147483647!important;}[vw-plugin-wrapper]{z-index:2147483646!important;}';
-                    doc.head.appendChild(style);
+                    var st = doc.createElement('style');
+                    st.id = 'vlibras-style';
+                    st.textContent = [
+                        '[vw]{z-index:2147483647!important;position:fixed!important;}',
+                        '[vw-access-button]{z-index:2147483647!important;}',
+                        '[vw-plugin-wrapper]{z-index:2147483646!important;}'
+                    ].join('');
+                    doc.head.appendChild(st);
                 }
 
+                // Estrutura HTML do widget (idempotente)
                 if (!doc.querySelector('[vw]')) {
-                    var div = doc.createElement('div');
-                    div.setAttribute('vw','');
-                    div.className='enabled';
-                    div.innerHTML='&lt;div vw-access-button class=&quot;active&quot;&gt;&lt;/div&gt;&lt;div vw-plugin-wrapper&gt;&lt;div class=&quot;vw-plugin-top-wrapper&quot;&gt;&lt;/div&gt;&lt;/div&gt;';
-                    doc.body.appendChild(div);
+                    var el = doc.createElement('div');
+                    el.setAttribute('vw', '');
+                    el.className = 'enabled';
+                    el.innerHTML = '<div vw-access-button class="active"></div>'
+                                 + '<div vw-plugin-wrapper>'
+                                 + '<div class="vw-plugin-top-wrapper"></div>'
+                                 + '</div>';
+                    doc.body.appendChild(el);
                 }
 
+                // Carrega o script VLibras e inicializa o widget (idempotente)
                 if (!doc.querySelector('script[data-vlibras]')) {
                     var s = doc.createElement('script');
-                    s.setAttribute('data-vlibras','1');
-                    s.src='https://vlibras.gov.br/app/vlibras-plugin.js';
-                    s.onload=function(){
-                        if(win.VLibras){
+                    s.setAttribute('data-vlibras', '1');
+                    s.src = 'https://vlibras.gov.br/app/vlibras-plugin.js';
+                    s.onload = function() {
+                        if (win.VLibras) {
                             new win.VLibras.Widget({
-                                rootPath:'https://vlibras.gov.br/app',
-                                avatar:'icaro',
-                                position:'R',
-                                opacity:1
+                                rootPath: 'https://vlibras.gov.br/app',
+                                avatar:   'icaro',
+                                position: 'R',
+                                opacity:  1
                             });
                         }
                     };
                     doc.body.appendChild(s);
                 }
-            })();
-            &lt;/script&gt;"
-        sandbox="allow-same-origin allow-scripts"
-        style="display:none;width:0;height:0;border:none;"
-        title="VLibras Acessibilidade"
-    ></iframe>
-    """
-    st.markdown(vlibras_iframe, unsafe_allow_html=True)
+            } catch(e) {
+                console.warn('[VLibras] Falha na injeção:', e);
+            }
+        }
 
+        // Executa imediatamente e com delay para garantir o DOM do Streamlit
+        injectVLibras();
+        setTimeout(injectVLibras, 800);
+        </script>
+        """,
+        height=0,
+    )
 
 # ---------------------------------------------------------------------------
 # Funções auxiliares para cookies via JavaScript
