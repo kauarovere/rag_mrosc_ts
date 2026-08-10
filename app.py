@@ -504,6 +504,12 @@ def _inject_vlibras():
                     'background:transparent',
                     'z-index:2147483646'
                 ].join(';');
+                // Cursor pointer só quando painel aberto
+                try {
+                    var pb = window.parent.document.body;
+                    if (open) pb.classList.add('vlibras-active');
+                    else       pb.classList.remove('vlibras-active');
+                } catch(e) {}
             }
 
             /* Começa fechado (só o botão de 80px) */
@@ -607,14 +613,20 @@ def _inject_vlibras():
                     var pDoc = window.parent.document;
                     var pWin = window.parent;
 
-                    // Cursor de mão em textos do parent para indicar clicabilidade
+                    // Cursor pointer apenas quando VLibras estiver ativo (body.vlibras-active)
                     if (!pDoc.querySelector('#vw-bridge-style')) {
                         var sty = pDoc.createElement('style');
                         sty.id  = 'vw-bridge-style';
                         sty.textContent =
-                            'p:hover, li:hover, h1:hover, h2:hover, h3:hover,' +
-                            'h4:hover, h5:hover, h6:hover, span:hover {' +
-                            'cursor: pointer !important; }';
+                            'body.vlibras-active p:hover,' +
+                            'body.vlibras-active li:hover,' +
+                            'body.vlibras-active h1:hover,' +
+                            'body.vlibras-active h2:hover,' +
+                            'body.vlibras-active h3:hover,' +
+                            'body.vlibras-active h4:hover,' +
+                            'body.vlibras-active h5:hover,' +
+                            'body.vlibras-active h6:hover {' +
+                            'cursor: pointer !important; outline: 2px dashed #7B2FBE55 !important; }';
                         pDoc.head.appendChild(sty);
                     }
 
