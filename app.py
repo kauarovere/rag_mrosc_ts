@@ -451,75 +451,97 @@ st.markdown(
 # VLibras — Função reutilizável para injetar o widget em qualquer tela
 # ---------------------------------------------------------------------------
 def _inject_vlibras():
-    """Injeta o widget VLibras via components.html().
+    """Integra o VLibras como plugin flutuante usando o próprio iframe do Streamlit.
 
-    Não usa session_state como guard — a idempotência é garantida pela
-    variável window.parent._vwReady no contexto do browser, que persiste
-    enquanto a aba estiver aberta mas não entre deploys.
-    Logs detalhados facilitam debug via DevTools Console.
+    Em vez de tentar injetar no window.parent (que o Streamlit limpa), o VLibras
+    roda inteiramente dentro do iframe de components.html(). O script usa
+    window.frameElement para reposicionar esse iframe como position:fixed no
+    canto inferior direito — sem interferência do React, sem problemas de CSP.
     """
     components.html(
         """
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            html, body {
+                background: transparent !important;
+                overflow: visible !important;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+        </head>
+        <body>
+
+        <!-- Estrutura do widget VLibras -->
+        <div vw class="enabled">
+            <div vw-access-button class="active"></div>
+            <div vw-plugin-wrapper>
+                <div class="vw-plugin-top-wrapper"></div>
+            </div>
+        </div>
+
+        <!-- Plugin oficial VLibras -->
+        <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
         <script>
         (function() {
+            // ── Passo 1: Repositiona o iframe do Streamlit para fixed bottom-right ──
+            // window.frameElement acessa o <iframe> no DOM do pai (Streamlit),
+            // permitindo fixá-lo visualmente sem sair do contexto do iframe.
             try {
-                var p = window.parent;
-                var d = p.document;
-                console.log('[VLibras] 🔍 Tentando injetar no window.parent...');
-
-                // Idempotência via flag no window do browser (não session_state)
-                if (p._vwReady) {
-                    console.log('[VLibras] ℹ️ Já inicializado, pulando.');
-                    return;
+                var frame = window.frameElement;
+                if (frame) {
+                    frame.style.cssText = [
+                        'position: fixed !important',
+                        'bottom: 0 !important',
+                        'right:  0 !important',
+                        'width:  400px !important',
+                        'height: 600px !important',
+                        'border: none !important',
+                        'background: transparent !important',
+                        'z-index: 2147483646 !important',
+                        'pointer-events: none !important',
+                        'overflow: visible !important'
+                    ].join(';');
+                    // Permite interação apenas nos elementos do VLibras
+                    frame.addEventListener('load', function() {
+                        var vw = document.querySelector('[vw]');
+                        if (vw) vw.style.pointerEvents = 'auto';
+                    });
+                    console.log('[VLibras] ✅ Iframe fixado em bottom-right (400x600)');
+                } else {
+                    console.warn('[VLibras] ⚠️ window.frameElement é null — tentando continuar.');
                 }
-                p._vwReady = true;
+            } catch(e) {
+                console.error('[VLibras] ❌ Erro ao posicionar iframe:', e);
+            }
 
-                // Injeta a estrutura HTML [vw] no body do documento principal
-                if (!d.querySelector('[vw]')) {
-                    var wrap = d.createElement('div');
-                    wrap.setAttribute('vw', '');
-                    wrap.className = 'enabled';
-                    wrap.innerHTML =
-                        '<div vw-access-button class="active"></div>' +
-                        '<div vw-plugin-wrapper>' +
-                        '<div class="vw-plugin-top-wrapper"></div>' +
-                        '</div>';
-                    d.body.appendChild(wrap);
-                    console.log('[VLibras] ✅ Estrutura HTML injetada no body.');
-                }
-
-                // Carrega o plugin VLibras e inicializa o widget
-                var s = d.createElement('script');
-                s.setAttribute('data-vw', '1');
-                s.src = 'https://vlibras.gov.br/app/vlibras-plugin.js';
-                s.onload = function() {
-                    if (p.VLibras) {
-                        new p.VLibras.Widget({
-                            rootPath: 'https://vlibras.gov.br/app',
-                            avatar:   'icaro',
-                            position: 'R',
-                            opacity:  1
-                        });
-                        console.log('[VLibras] ✅ Widget inicializado com sucesso!');
-                    } else {
-                        console.error('[VLibras] ❌ VLibras ausente após carregar o script.');
-                    }
-                };
-                s.onerror = function(e) {
-                    console.error('[VLibras] ❌ Falha ao carregar vlibras-plugin.js:', e);
-                };
-                d.body.appendChild(s);
-                console.log('[VLibras] 📦 Script vlibras-plugin.js adicionado ao body...');
-
-            } catch(err) {
-                console.error('[VLibras] ❌ Erro ao acessar window.parent.document:', err);
+            // ── Passo 2: Inicializa o Widget VLibras dentro do iframe ──
+            if (window.VLibras) {
+                new window.VLibras.Widget({
+                    rootPath: 'https://vlibras.gov.br/app',
+                    avatar:   'icaro',
+                    position: 'R',
+                    opacity:  1
+                });
+                // Libera pointer-events nos elementos do VLibras após inicialização
+                setTimeout(function() {
+                    var els = document.querySelectorAll('[vw], [vw-access-button], [vw-plugin-wrapper]');
+                    els.forEach(function(el) { el.style.pointerEvents = 'auto'; });
+                }, 500);
+                console.log('[VLibras] ✅ Widget inicializado no iframe!');
+            } else {
+                console.error('[VLibras] ❌ VLibras não disponível após carregar o script.');
             }
         })();
         </script>
+        </body>
+        </html>
         """,
-        height=0,
+        height=1,  # 1px reservado no layout; posição real é via position:fixed no JS
     )
-
 
 
 # ---------------------------------------------------------------------------
