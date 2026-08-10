@@ -451,12 +451,13 @@ st.markdown(
 # VLibras — Função reutilizável para injetar o widget em qualquer tela
 # ---------------------------------------------------------------------------
 def _inject_vlibras():
-    """Integra o VLibras como plugin flutuante usando o próprio iframe do Streamlit.
+    """VLibras como plugin flutuante no canto direito da tela.
 
-    Em vez de tentar injetar no window.parent (que o Streamlit limpa), o VLibras
-    roda inteiramente dentro do iframe de components.html(). O script usa
-    window.frameElement para reposicionar esse iframe como position:fixed no
-    canto inferior direito — sem interferência do React, sem problemas de CSP.
+    O iframe do Streamlit é reposicionado via window.frameElement:
+    - Fechado: 80px de largura (apenas o botão de acesso visível)
+    - Aberto: 400px de largura (painel completo do avatar)
+    Um MutationObserver detecta automaticamente quando o VLibras abre ou fecha
+    e ajusta o tamanho do iframe sem precisar de interação do Python.
     """
     components.html(
         """
@@ -467,15 +468,14 @@ def _inject_vlibras():
             * { margin: 0; padding: 0; box-sizing: border-box; }
             html, body {
                 background: transparent !important;
-                overflow: visible !important;
-                width: 100%;
-                height: 100%;
+                overflow: hidden;
+                width: 100%; height: 100%;
             }
         </style>
         </head>
         <body>
 
-        <!-- Estrutura do widget VLibras -->
+        <!-- Estrutura requerida pelo VLibras -->
         <div vw class="enabled">
             <div vw-access-button class="active"></div>
             <div vw-plugin-wrapper>
@@ -483,64 +483,77 @@ def _inject_vlibras():
             </div>
         </div>
 
-        <!-- Plugin oficial VLibras -->
         <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
         <script>
-        (function() {
-            // ── Passo 1: Repositiona o iframe do Streamlit para fixed bottom-right ──
-            // window.frameElement acessa o <iframe> no DOM do pai (Streamlit),
-            // permitindo fixá-lo visualmente sem sair do contexto do iframe.
-            try {
-                var frame = window.frameElement;
-                if (frame) {
-                    frame.style.cssText = [
-                        'position: fixed !important',
-                        'bottom: 0 !important',
-                        'right:  0 !important',
-                        'width:  400px !important',
-                        'height: 600px !important',
-                        'border: none !important',
-                        'background: transparent !important',
-                        'z-index: 2147483646 !important',
-                        'pointer-events: none !important',
-                        'overflow: visible !important'
-                    ].join(';');
-                    // Permite interação apenas nos elementos do VLibras
-                    frame.addEventListener('load', function() {
-                        var vw = document.querySelector('[vw]');
-                        if (vw) vw.style.pointerEvents = 'auto';
-                    });
-                    console.log('[VLibras] ✅ Iframe fixado em bottom-right (400x600)');
-                } else {
-                    console.warn('[VLibras] ⚠️ window.frameElement é null — tentando continuar.');
-                }
-            } catch(e) {
-                console.error('[VLibras] ❌ Erro ao posicionar iframe:', e);
+        (function () {
+            var frame = window.frameElement;
+            var panelOpen = false;
+
+            /* ── Redimensiona o iframe conforme estado do VLibras ── */
+            function resize(open) {
+                if (!frame) return;
+                panelOpen = open;
+                frame.style.cssText = [
+                    'position:fixed',
+                    'top:0',
+                    'right:0',
+                    'bottom:0',
+                    'height:100vh',
+                    open ? 'width:400px' : 'width:80px',
+                    'border:none',
+                    'background:transparent',
+                    'z-index:2147483646'
+                ].join(';');
             }
 
-            // ── Passo 2: Inicializa o Widget VLibras dentro do iframe ──
-            if (window.VLibras) {
-                new window.VLibras.Widget({
-                    rootPath: 'https://vlibras.gov.br/app',
-                    avatar:   'icaro',
-                    position: 'R',
-                    opacity:  1
+            /* Começa fechado (só o botão de 80px) */
+            resize(false);
+
+            /* ── Inicializa o VLibras ── */
+            new window.VLibras.Widget({
+                rootPath: 'https://vlibras.gov.br/app',
+                avatar:   'icaro',
+                position: 'R',
+                opacity:  1
+            });
+
+            /* ── Detecta abertura/fechamento do painel ── */
+            setTimeout(function () {
+                var wrapper = document.querySelector('[vw-plugin-wrapper]');
+                if (!wrapper) return;
+
+                /* MutationObserver — observa mudanças de classe/estilo no wrapper */
+                var obs = new MutationObserver(function () {
+                    var s   = window.getComputedStyle(wrapper);
+                    var vis = s.display !== 'none'
+                           && s.visibility !== 'hidden'
+                           && wrapper.offsetWidth > 10;
+                    if (vis !== panelOpen) resize(vis);
                 });
-                // Libera pointer-events nos elementos do VLibras após inicialização
-                setTimeout(function() {
-                    var els = document.querySelectorAll('[vw], [vw-access-button], [vw-plugin-wrapper]');
-                    els.forEach(function(el) { el.style.pointerEvents = 'auto'; });
-                }, 500);
-                console.log('[VLibras] ✅ Widget inicializado no iframe!');
-            } else {
-                console.error('[VLibras] ❌ VLibras não disponível após carregar o script.');
-            }
+                obs.observe(document.body, {
+                    attributes: true, subtree: true,
+                    attributeFilter: ['class', 'style']
+                });
+
+                /* Fallback: clique no botão de acesso */
+                var btn = document.querySelector('[vw-access-button]');
+                if (btn) {
+                    btn.addEventListener('click', function () {
+                        setTimeout(function () {
+                            var s   = window.getComputedStyle(wrapper);
+                            var vis = s.display !== 'none' && wrapper.offsetWidth > 10;
+                            if (vis !== panelOpen) resize(vis);
+                        }, 350);
+                    });
+                }
+                console.log('[VLibras] ✅ Pronto — botão visível na borda direita.');
+            }, 1200);
         })();
         </script>
         </body>
         </html>
         """,
-        height=1,  # 1px reservado no layout; posição real é via position:fixed no JS
+        height=1,
     )
 
 
