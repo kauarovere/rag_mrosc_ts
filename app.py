@@ -451,55 +451,76 @@ st.markdown(
 # VLibras — Função reutilizável para injetar o widget em qualquer tela
 # ---------------------------------------------------------------------------
 def _inject_vlibras():
-    """Injeta o widget VLibras usando st.html() (Streamlit >= 1.36).
+    """Injeta o widget VLibras via components.html().
 
-    st.html() insere HTML diretamente no documento principal — sem iframe,
-    sem sandbox. Scripts são executados no contexto da página, permitindo
-    que o VLibras inicialize e acesse o DOM normalmente.
+    Não usa session_state como guard — a idempotência é garantida pela
+    variável window.parent._vwReady no contexto do browser, que persiste
+    enquanto a aba estiver aberta mas não entre deploys.
+    Logs detalhados facilitam debug via DevTools Console.
     """
-    if st.session_state.get("_vlibras_injected"):
-        return
-    st.session_state["_vlibras_injected"] = True
-
-    st.html("""
-        <div vw class="enabled">
-            <div vw-access-button class="active"></div>
-            <div vw-plugin-wrapper>
-                <div class="vw-plugin-top-wrapper"></div>
-            </div>
-        </div>
-        <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    components.html(
+        """
         <script>
-            (function() {
-                function startVLibras() {
-                    if (window.VLibras) {
-                        new window.VLibras.Widget({
+        (function() {
+            try {
+                var p = window.parent;
+                var d = p.document;
+                console.log('[VLibras] 🔍 Tentando injetar no window.parent...');
+
+                // Idempotência via flag no window do browser (não session_state)
+                if (p._vwReady) {
+                    console.log('[VLibras] ℹ️ Já inicializado, pulando.');
+                    return;
+                }
+                p._vwReady = true;
+
+                // Injeta a estrutura HTML [vw] no body do documento principal
+                if (!d.querySelector('[vw]')) {
+                    var wrap = d.createElement('div');
+                    wrap.setAttribute('vw', '');
+                    wrap.className = 'enabled';
+                    wrap.innerHTML =
+                        '<div vw-access-button class="active"></div>' +
+                        '<div vw-plugin-wrapper>' +
+                        '<div class="vw-plugin-top-wrapper"></div>' +
+                        '</div>';
+                    d.body.appendChild(wrap);
+                    console.log('[VLibras] ✅ Estrutura HTML injetada no body.');
+                }
+
+                // Carrega o plugin VLibras e inicializa o widget
+                var s = d.createElement('script');
+                s.setAttribute('data-vw', '1');
+                s.src = 'https://vlibras.gov.br/app/vlibras-plugin.js';
+                s.onload = function() {
+                    if (p.VLibras) {
+                        new p.VLibras.Widget({
                             rootPath: 'https://vlibras.gov.br/app',
                             avatar:   'icaro',
                             position: 'R',
                             opacity:  1
                         });
-                        console.log('[VLibras] Widget inicializado com sucesso.');
+                        console.log('[VLibras] ✅ Widget inicializado com sucesso!');
+                    } else {
+                        console.error('[VLibras] ❌ VLibras ausente após carregar o script.');
                     }
-                }
-                // Tenta imediatamente ou aguarda o script carregar
-                if (window.VLibras) {
-                    startVLibras();
-                } else {
-                    document.currentScript
-                        .previousElementSibling
-                        .addEventListener('load', startVLibras);
-                    // Fallback com delay
-                    setTimeout(function() {
-                        if (!window.VLibras) return;
-                        if (!document.querySelector('[vw].initialized')) {
-                            startVLibras();
-                        }
-                    }, 1500);
-                }
-            })();
+                };
+                s.onerror = function(e) {
+                    console.error('[VLibras] ❌ Falha ao carregar vlibras-plugin.js:', e);
+                };
+                d.body.appendChild(s);
+                console.log('[VLibras] 📦 Script vlibras-plugin.js adicionado ao body...');
+
+            } catch(err) {
+                console.error('[VLibras] ❌ Erro ao acessar window.parent.document:', err);
+            }
+        })();
         </script>
-    """)
+        """,
+        height=0,
+    )
+
+
 
 # ---------------------------------------------------------------------------
 # Funções auxiliares para cookies via JavaScript
