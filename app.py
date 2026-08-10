@@ -526,32 +526,19 @@ def _inject_vlibras():
                 });
             }
 
-            /* ── Detecta abertura/fechamento do painel via cliques ── */
+            /* ── Controle de abertura/fechamento do painel ── */
             setTimeout(function () {
-                var btn     = document.querySelector('[vw-access-button]');
-                var wrapper = document.querySelector('[vw-plugin-wrapper]');
+                var btn = document.querySelector('[vw-access-button]');
 
-                /* Checa o estado real do painel após um clique */
-                function syncState() {
-                    setTimeout(function() {
-                        if (!wrapper) return;
-                        var s       = window.getComputedStyle(wrapper);
-                        var nowOpen = s.display     !== 'none'
-                                   && s.visibility !== 'hidden'
-                                   && wrapper.offsetWidth > 10;
-                        if (nowOpen !== panelOpen) resize(nowOpen);
-                    }, 250);
+                /* Toggle simples — único ponto de controle do estado.
+                 * Evita offsetWidth/getComputedStyle que retornam positivo
+                 * mesmo com o painel fechado e causam false positives. */
+                if (btn) {
+                    btn.addEventListener('click', function() {
+                        panelOpen = !panelOpen;
+                        resize(panelOpen);
+                    });
                 }
-
-                /* 1) Clique no botão de acesso (abre/fecha VLibras) */
-                if (btn) btn.addEventListener('click', syncState);
-
-                /* 2) Clique dentro do wrapper (detecta botão X de fechar) */
-                document.addEventListener('click', function(e) {
-                    if (e.target.closest && e.target.closest('[vw-plugin-wrapper]')) {
-                        syncState();
-                    }
-                });
 
                 /* ─────────────────────────────────────────────────────────────
                  *  Bridge de tradução: intercepta cliques no documento pai
