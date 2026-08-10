@@ -597,16 +597,12 @@ def _inject_vlibras():
                 var pendingText = '';
                 function translateWithOpen(text) {
                     if (!panelOpen) {
-                        // Abre o painel antes de traduzir
-                        resize(true);
-                        if (btn) btn.click();
-                        pendingText = text;
-                        setTimeout(function() {
-                            if (pendingText) { doTranslate(pendingText); pendingText = ''; }
-                        }, 900);
-                    } else {
-                        doTranslate(text);
+                        // Apenas tenta traduzir se painel já estiver aberto
+                        // (cursor pointer só aparece quando panelOpen=true,
+                        //  então este caminho nunca deve ser chamado quando fechado)
+                        return;
                     }
+                    doTranslate(text);
                 }
 
                 try {
@@ -632,6 +628,9 @@ def _inject_vlibras():
 
                     // Listener de clique no documento pai
                     pDoc.body.addEventListener('click', function(e) {
+                        // Só traduz quando VLibras já estiver com painel aberto
+                        if (!panelOpen) return;
+
                         var tag = (e.target.tagName || '').toUpperCase();
                         if (/^(INPUT|TEXTAREA|BUTTON|A|SELECT|OPTION|SVG|PATH)$/.test(tag)) return;
 
@@ -642,7 +641,7 @@ def _inject_vlibras():
                             var el = e.target.closest('p, li, h1, h2, h3, h4, h5, h6, td, th') || e.target;
                             text   = (el.textContent || '').trim();
                         }
-                        if (text && text.length >= 3) translateWithOpen(text);
+                        if (text && text.length >= 3) doTranslate(text);
                     });
 
                     console.log('[VLibras] ✅ Bridge de tradução ativo — clique em qualquer texto da página.');
