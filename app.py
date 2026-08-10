@@ -515,13 +515,16 @@ def _inject_vlibras():
             /* Começa fechado (só o botão de 80px) */
             resize(false);
 
-            /* ── Inicializa o VLibras ── */
-            new window.VLibras.Widget({
-                rootPath: 'https://vlibras.gov.br/app',
-                avatar:   'icaro',
-                position: 'R',
-                opacity:  1
-            });
+            /* ── Inicializa o VLibras e guarda instância para usar a API de tradução ── */
+            var vlibrasInstance = null;
+            if (window.VLibras) {
+                vlibrasInstance = new window.VLibras.Widget({
+                    rootPath: 'https://vlibras.gov.br/app',
+                    avatar:   'icaro',
+                    position: 'R',
+                    opacity:  1
+                });
+            }
 
             /* ── Detecta abertura/fechamento do painel via cliques ── */
             setTimeout(function () {
@@ -556,39 +559,72 @@ def _inject_vlibras():
                  * ───────────────────────────────────────────────────────────── */
                 function doTranslate(text) {
                     if (!text || text.length < 3) return;
-                    // Método 1: API pública window.vlibras (mais comum)
+                    console.log('[VLibras] 🔄 Traduzindo:', text.substring(0, 60));
+
+                    // Método 0: API da instância do Widget (mais confiável)
+                    try {
+                        if (vlibrasInstance && typeof vlibrasInstance.translate === 'function') {
+                            vlibrasInstance.translate(text);
+                            console.log('[VLibras] 🤟 via widget.translate()');
+                            return;
+                        }
+                    } catch(e0) { console.warn('[VLibras] widget.translate erro:', e0); }
+
+                    // Método 1: API pública window.vlibras
                     try {
                         if (window.vlibras && typeof window.vlibras.translate === 'function') {
                             window.vlibras.translate(text);
-                            console.log('[VLibras] 🤟 Traduzindo via vlibras.translate');
+                            console.log('[VLibras] 🤟 via vlibras.translate');
                             return;
                         }
                     } catch(e1) {}
+
                     // Método 2: API pelo Player
                     try {
                         if (window.VLibras && window.VLibras.Player &&
                             typeof window.VLibras.Player.translate === 'function') {
                             window.VLibras.Player.translate(text);
-                            console.log('[VLibras] 🤟 Traduzindo via VLibras.Player.translate');
+                            console.log('[VLibras] 🤟 via VLibras.Player.translate');
                             return;
                         }
                     } catch(e2) {}
-                    // Método 3: simula seleção de texto no iframe para VLibras detectar
-                    var tmp = document.createElement('span');
+
+                    // Debug — mostra o que está disponível no VLibras
+                    console.log('[VLibras Debug] vlibrasInstance keys:',
+                        vlibrasInstance ? Object.keys(vlibrasInstance) : 'null');
+                    console.log('[VLibras Debug] window.vlibras:',
+                        window.vlibras   ? Object.keys(window.vlibras) : 'null');
+                    console.log('[VLibras Debug] window.VLibras:',
+                        Object.keys(window.VLibras || {}));
+
+                    // Método 3: Simula seleção de texto no iframe + todos os eventos de clique
+                    var tmp = document.createElement('p');
+                    tmp.id  = 'vw-translate-tmp';
                     tmp.textContent = text;
-                    tmp.style.cssText = 'position:absolute;left:-9999px;opacity:0;pointer-events:none;';
+                    // Elemento pequeno mas dentro do viewport (VLibras pode ignorar elementos fora)
+                    tmp.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;' +
+                                        'z-index:-999;color:rgba(0,0,0,0.01);font-size:1px;overflow:hidden;';
                     document.body.appendChild(tmp);
+
                     var range = document.createRange();
                     range.selectNodeContents(tmp);
                     var sel = window.getSelection();
                     sel.removeAllRanges();
                     sel.addRange(range);
-                    tmp.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));
-                    document.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));
+
+                    // Dispara mousedown, mouseup e click em cascata
+                    ['mousedown', 'mouseup', 'click'].forEach(function(evtType) {
+                        var opts = {bubbles: true, cancelable: true, view: window};
+                        tmp.dispatchEvent(new MouseEvent(evtType, opts));
+                        document.body.dispatchEvent(new MouseEvent(evtType, opts));
+                        document.dispatchEvent(new MouseEvent(evtType, opts));
+                    });
+                    console.log('[VLibras] 🤟 via simulação DOM (mousedown+mouseup+click)');
+
                     setTimeout(function() {
-                        if (document.body.contains(tmp)) document.body.removeChild(tmp);
-                    }, 4000);
-                    console.log('[VLibras] 🤟 Traduzindo via simulação de seleção');
+                        var el = document.getElementById('vw-translate-tmp');
+                        if (el && el.parentNode) el.parentNode.removeChild(el);
+                    }, 5000);
                 }
 
                 var pendingText = '';
