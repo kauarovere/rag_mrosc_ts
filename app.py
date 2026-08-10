@@ -451,76 +451,55 @@ st.markdown(
 # VLibras — Função reutilizável para injetar o widget em qualquer tela
 # ---------------------------------------------------------------------------
 def _inject_vlibras():
-    """Injeta o widget VLibras no DOM principal do Streamlit.
+    """Injeta o widget VLibras usando st.html() (Streamlit >= 1.36).
 
-    Usa components.html() que cria um iframe com allow-same-origin, permitindo
-    acesso a window.parent.document para inserir o widget no documento principal.
+    st.html() insere HTML diretamente no documento principal — sem iframe,
+    sem sandbox. Scripts são executados no contexto da página, permitindo
+    que o VLibras inicialize e acesse o DOM normalmente.
     """
     if st.session_state.get("_vlibras_injected"):
         return
     st.session_state["_vlibras_injected"] = True
 
-    components.html(
-        """
+    st.html("""
+        <div vw class="enabled">
+            <div vw-access-button class="active"></div>
+            <div vw-plugin-wrapper>
+                <div class="vw-plugin-top-wrapper"></div>
+            </div>
+        </div>
+        <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
         <script>
-        function injectVLibras() {
-            try {
-                var doc  = window.parent.document;
-                var win  = window.parent;
-
-                // Estilo de z-index (evita duplicar)
-                if (!doc.querySelector('#vlibras-style')) {
-                    var st = doc.createElement('style');
-                    st.id = 'vlibras-style';
-                    st.textContent = [
-                        '[vw]{z-index:2147483647!important;position:fixed!important;}',
-                        '[vw-access-button]{z-index:2147483647!important;}',
-                        '[vw-plugin-wrapper]{z-index:2147483646!important;}'
-                    ].join('');
-                    doc.head.appendChild(st);
+            (function() {
+                function startVLibras() {
+                    if (window.VLibras) {
+                        new window.VLibras.Widget({
+                            rootPath: 'https://vlibras.gov.br/app',
+                            avatar:   'icaro',
+                            position: 'R',
+                            opacity:  1
+                        });
+                        console.log('[VLibras] Widget inicializado com sucesso.');
+                    }
                 }
-
-                // Estrutura HTML do widget (idempotente)
-                if (!doc.querySelector('[vw]')) {
-                    var el = doc.createElement('div');
-                    el.setAttribute('vw', '');
-                    el.className = 'enabled';
-                    el.innerHTML = '<div vw-access-button class="active"></div>'
-                                 + '<div vw-plugin-wrapper>'
-                                 + '<div class="vw-plugin-top-wrapper"></div>'
-                                 + '</div>';
-                    doc.body.appendChild(el);
-                }
-
-                // Carrega o script VLibras e inicializa o widget (idempotente)
-                if (!doc.querySelector('script[data-vlibras]')) {
-                    var s = doc.createElement('script');
-                    s.setAttribute('data-vlibras', '1');
-                    s.src = 'https://vlibras.gov.br/app/vlibras-plugin.js';
-                    s.onload = function() {
-                        if (win.VLibras) {
-                            new win.VLibras.Widget({
-                                rootPath: 'https://vlibras.gov.br/app',
-                                avatar:   'icaro',
-                                position: 'R',
-                                opacity:  1
-                            });
+                // Tenta imediatamente ou aguarda o script carregar
+                if (window.VLibras) {
+                    startVLibras();
+                } else {
+                    document.currentScript
+                        .previousElementSibling
+                        .addEventListener('load', startVLibras);
+                    // Fallback com delay
+                    setTimeout(function() {
+                        if (!window.VLibras) return;
+                        if (!document.querySelector('[vw].initialized')) {
+                            startVLibras();
                         }
-                    };
-                    doc.body.appendChild(s);
+                    }, 1500);
                 }
-            } catch(e) {
-                console.warn('[VLibras] Falha na injeção:', e);
-            }
-        }
-
-        // Executa imediatamente e com delay para garantir o DOM do Streamlit
-        injectVLibras();
-        setTimeout(injectVLibras, 800);
+            })();
         </script>
-        """,
-        height=0,
-    )
+    """)
 
 # ---------------------------------------------------------------------------
 # Funções auxiliares para cookies via JavaScript
