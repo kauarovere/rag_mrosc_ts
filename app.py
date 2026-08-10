@@ -546,8 +546,101 @@ def _inject_vlibras():
                         }, 350);
                     });
                 }
+
+                /* ─────────────────────────────────────────────────────────────
+                 *  Bridge de tradução: intercepta cliques no documento pai
+                 *  e repassa o texto para o VLibras traduzir via Libras.
+                 * ───────────────────────────────────────────────────────────── */
+                function doTranslate(text) {
+                    if (!text || text.length < 3) return;
+                    // Método 1: API pública window.vlibras (mais comum)
+                    try {
+                        if (window.vlibras && typeof window.vlibras.translate === 'function') {
+                            window.vlibras.translate(text);
+                            console.log('[VLibras] 🤟 Traduzindo via vlibras.translate');
+                            return;
+                        }
+                    } catch(e1) {}
+                    // Método 2: API pelo Player
+                    try {
+                        if (window.VLibras && window.VLibras.Player &&
+                            typeof window.VLibras.Player.translate === 'function') {
+                            window.VLibras.Player.translate(text);
+                            console.log('[VLibras] 🤟 Traduzindo via VLibras.Player.translate');
+                            return;
+                        }
+                    } catch(e2) {}
+                    // Método 3: simula seleção de texto no iframe para VLibras detectar
+                    var tmp = document.createElement('span');
+                    tmp.textContent = text;
+                    tmp.style.cssText = 'position:absolute;left:-9999px;opacity:0;pointer-events:none;';
+                    document.body.appendChild(tmp);
+                    var range = document.createRange();
+                    range.selectNodeContents(tmp);
+                    var sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    tmp.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));
+                    document.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));
+                    setTimeout(function() {
+                        if (document.body.contains(tmp)) document.body.removeChild(tmp);
+                    }, 4000);
+                    console.log('[VLibras] 🤟 Traduzindo via simulação de seleção');
+                }
+
+                var pendingText = '';
+                function translateWithOpen(text) {
+                    if (!panelOpen) {
+                        // Abre o painel antes de traduzir
+                        resize(true);
+                        if (btn) btn.click();
+                        pendingText = text;
+                        setTimeout(function() {
+                            if (pendingText) { doTranslate(pendingText); pendingText = ''; }
+                        }, 900);
+                    } else {
+                        doTranslate(text);
+                    }
+                }
+
+                try {
+                    var pDoc = window.parent.document;
+                    var pWin = window.parent;
+
+                    // Cursor de mão em textos do parent para indicar clicabilidade
+                    if (!pDoc.querySelector('#vw-bridge-style')) {
+                        var sty = pDoc.createElement('style');
+                        sty.id  = 'vw-bridge-style';
+                        sty.textContent =
+                            'p:hover, li:hover, h1:hover, h2:hover, h3:hover,' +
+                            'h4:hover, h5:hover, h6:hover, span:hover {' +
+                            'cursor: pointer !important; }';
+                        pDoc.head.appendChild(sty);
+                    }
+
+                    // Listener de clique no documento pai
+                    pDoc.body.addEventListener('click', function(e) {
+                        var tag = (e.target.tagName || '').toUpperCase();
+                        if (/^(INPUT|TEXTAREA|BUTTON|A|SELECT|OPTION|SVG|PATH)$/.test(tag)) return;
+
+                        // Prioriza texto selecionado; fallback para textContent do elemento
+                        var sel  = pWin.getSelection();
+                        var text = sel && sel.toString().trim();
+                        if (!text || text.length < 3) {
+                            var el = e.target.closest('p, li, h1, h2, h3, h4, h5, h6, td, th') || e.target;
+                            text   = (el.textContent || '').trim();
+                        }
+                        if (text && text.length >= 3) translateWithOpen(text);
+                    });
+
+                    console.log('[VLibras] ✅ Bridge de tradução ativo — clique em qualquer texto da página.');
+                } catch(be) {
+                    console.error('[VLibras] ❌ Erro ao configurar bridge:', be);
+                }
+
                 console.log('[VLibras] ✅ Pronto — botão visível na borda direita.');
             }, 1200);
+
         })();
         </script>
         </body>
