@@ -523,35 +523,32 @@ def _inject_vlibras():
                 opacity:  1
             });
 
-            /* ── Detecta abertura/fechamento do painel ── */
+            /* ── Detecta abertura/fechamento do painel via cliques ── */
             setTimeout(function () {
+                var btn     = document.querySelector('[vw-access-button]');
                 var wrapper = document.querySelector('[vw-plugin-wrapper]');
-                if (!wrapper) return;
 
-                /* MutationObserver — observa mudanças de classe/estilo no wrapper */
-                var obs = new MutationObserver(function () {
-                    var s   = window.getComputedStyle(wrapper);
-                    var vis = s.display !== 'none'
-                           && s.visibility !== 'hidden'
-                           && wrapper.offsetWidth > 10;
-                    if (vis !== panelOpen) resize(vis);
-                });
-                obs.observe(document.body, {
-                    attributes: true, subtree: true,
-                    attributeFilter: ['class', 'style']
-                });
-
-                /* Fallback: clique no botão de acesso */
-                var btn = document.querySelector('[vw-access-button]');
-                if (btn) {
-                    btn.addEventListener('click', function () {
-                        setTimeout(function () {
-                            var s   = window.getComputedStyle(wrapper);
-                            var vis = s.display !== 'none' && wrapper.offsetWidth > 10;
-                            if (vis !== panelOpen) resize(vis);
-                        }, 350);
-                    });
+                /* Checa o estado real do painel após um clique */
+                function syncState() {
+                    setTimeout(function() {
+                        if (!wrapper) return;
+                        var s       = window.getComputedStyle(wrapper);
+                        var nowOpen = s.display     !== 'none'
+                                   && s.visibility !== 'hidden'
+                                   && wrapper.offsetWidth > 10;
+                        if (nowOpen !== panelOpen) resize(nowOpen);
+                    }, 250);
                 }
+
+                /* 1) Clique no botão de acesso (abre/fecha VLibras) */
+                if (btn) btn.addEventListener('click', syncState);
+
+                /* 2) Clique dentro do wrapper (detecta botão X de fechar) */
+                document.addEventListener('click', function(e) {
+                    if (e.target.closest && e.target.closest('[vw-plugin-wrapper]')) {
+                        syncState();
+                    }
+                });
 
                 /* ─────────────────────────────────────────────────────────────
                  *  Bridge de tradução: intercepta cliques no documento pai
