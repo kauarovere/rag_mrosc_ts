@@ -112,7 +112,7 @@ def _get_groq():
             "Defina-a no arquivo .env ou use o provedor 'ollama' (padrão)."
         )
 
-    model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
     print(f"   ⚡ LLM: Groq | modelo: {model}")
 

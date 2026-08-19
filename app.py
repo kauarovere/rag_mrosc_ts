@@ -486,42 +486,41 @@ def _inject_vlibras():
             </div>
         </div>
 
-        <!-- ① Suprime erros Unity ANTES de qualquer outro script -->
+        <!-- ① Suprime SOMENTE window.alert do Unity — não toca em onerror para não
+             quebrar a inicialização do vlibras-plugin.js nem o layout do Streamlit -->
         <script>
-        (function suppressUnityErrors() {
-            // Suprime window.onerror — evita o dialog "Script error." do browser
-            window.onerror = function() { return true; };
-
-            // Suprime window.alert — o Unity WebGL chama alert() ao falhar cross-origin
+        (function suppressUnityAlert() {
+            // O Unity WebGL chama window.alert("An error occurred...") ao falhar.
+            // Substituímos alert() para bloquear apenas esses alertas da Unity.
+            // NÃO sobrescrevemos window.onerror: o vlibras-plugin.js usa-o internamente
+            // para registrar window.VLibras — sobrescrevê-lo impede a inicialização.
             var _origAlert = window.alert;
             window.alert = function(msg) {
-                var s = String(msg || '');
-                if (s.toLowerCase().indexOf('script') !== -1 ||
-                    s.toLowerCase().indexOf('unity') !== -1  ||
-                    s.trim() === '') {
-                    console.warn('[VLibras] Alert suprimido:', s);
+                var s = String(msg || '').toLowerCase();
+                if (s.indexOf('unity') !== -1 ||
+                    s.indexOf('script error') !== -1 ||
+                    s.indexOf('an error occurred') !== -1) {
+                    console.warn('[VLibras] Alert Unity suprimido:', String(msg).substring(0, 80));
                     return;
                 }
                 _origAlert.apply(window, [msg]);
             };
-
-            // Tenta suprimir também no parent (mesma origem — streamlit.app)
+            // Tenta suprimir também no parent (mesma origem no Streamlit Cloud).
+            // IMPORTANTE: NÃO alteramos window.parent.onerror — o Streamlit
+            // depende desse handler para controle interno de layout/componentes.
             try {
-                window.parent.onerror = function() { return true; };
                 var _pAlert = window.parent.alert;
                 window.parent.alert = function(msg) {
-                    var s = String(msg || '');
-                    if (s.toLowerCase().indexOf('script') !== -1 ||
-                        s.toLowerCase().indexOf('unity') !== -1  ||
-                        s.trim() === '') {
-                        console.warn('[VLibras/parent] Alert suprimido:', s);
+                    var s = String(msg || '').toLowerCase();
+                    if (s.indexOf('unity') !== -1 ||
+                        s.indexOf('script error') !== -1 ||
+                        s.indexOf('an error occurred') !== -1) {
+                        console.warn('[VLibras/parent] Alert Unity suprimido.');
                         return;
                     }
                     _pAlert.apply(window.parent, [msg]);
                 };
-            } catch(e) {
-                // Cross-origin: não conseguiu acessar parent — sem problema
-            }
+            } catch(e) { /* cross-origin — sem problema */ }
         })();
         </script>
 
@@ -557,13 +556,11 @@ def _inject_vlibras():
             /* Começa fechado (só o botão de 80px) */
             resize(false);
 
-            /* ── Inicializa o VLibras com retry (vlibras-plugin.js é async) ── */
+            /* ── Inicializa o VLibras — síncrono primeiro, retry como fallback ── */
             var vlibrasInstance = null;
-            var _initAttempts = 0;
-            var _maxAttempts  = 10; // até 5 s (10 × 500 ms)
 
-            function tryInitVLibras() {
-                _initAttempts++;
+            function tryInitVLibras(attempt) {
+                attempt = attempt || 1;
                 if (window.VLibras) {
                     try {
                         vlibrasInstance = new window.VLibras.Widget({
@@ -572,17 +569,20 @@ def _inject_vlibras():
                             position: 'R',
                             opacity:  1
                         });
-                        console.log('[VLibras] ✅ Widget inicializado na tentativa', _initAttempts);
+                        console.log('[VLibras] Widget inicializado (tentativa ' + attempt + ')');
                     } catch(e) {
                         console.warn('[VLibras] Falha ao instanciar Widget:', e);
                     }
-                } else if (_initAttempts < _maxAttempts) {
-                    setTimeout(tryInitVLibras, 500);
+                } else if (attempt < 8) {
+                    // vlibras-plugin.js pode carregar outros scripts de forma async
+                    setTimeout(function() { tryInitVLibras(attempt + 1); }, 600);
                 } else {
-                    console.warn('[VLibras] window.VLibras não disponível após', _maxAttempts, 'tentativas.');
+                    console.warn('[VLibras] window.VLibras indisponível após 8 tentativas.');
                 }
             }
-            setTimeout(tryInitVLibras, 800);
+            // Tenta imediatamente (caso vlibras-plugin.js já carregou window.VLibras)
+            // e agenda retries para caso de carregamento assíncrono
+            tryInitVLibras(1);
 
             /* ── Controle de abertura/fechamento do painel ── */
             setTimeout(function () {
