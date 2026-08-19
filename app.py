@@ -456,8 +456,11 @@ def _inject_vlibras():
     O iframe do Streamlit é reposicionado via window.frameElement:
     - Fechado: 80px de largura (apenas o botão de acesso visível)
     - Aberto: 400px de largura (painel completo do avatar)
-    Um MutationObserver detecta automaticamente quando o VLibras abre ou fecha
-    e ajusta o tamanho do iframe sem precisar de interação do Python.
+
+    FIXES aplicados:
+    - Suprime window.alert e window.onerror ANTES de carregar vlibras-plugin.js,
+      evitando o dialog "Script error." causado pelo Unity WebGL cross-origin.
+    - Inicialização do Widget com retry (vlibras-plugin.js carrega assincronamente).
     """
     components.html(
         """
@@ -482,6 +485,45 @@ def _inject_vlibras():
                 <div class="vw-plugin-top-wrapper"></div>
             </div>
         </div>
+
+        <!-- ① Suprime erros Unity ANTES de qualquer outro script -->
+        <script>
+        (function suppressUnityErrors() {
+            // Suprime window.onerror — evita o dialog "Script error." do browser
+            window.onerror = function() { return true; };
+
+            // Suprime window.alert — o Unity WebGL chama alert() ao falhar cross-origin
+            var _origAlert = window.alert;
+            window.alert = function(msg) {
+                var s = String(msg || '');
+                if (s.toLowerCase().indexOf('script') !== -1 ||
+                    s.toLowerCase().indexOf('unity') !== -1  ||
+                    s.trim() === '') {
+                    console.warn('[VLibras] Alert suprimido:', s);
+                    return;
+                }
+                _origAlert.apply(window, [msg]);
+            };
+
+            // Tenta suprimir também no parent (mesma origem — streamlit.app)
+            try {
+                window.parent.onerror = function() { return true; };
+                var _pAlert = window.parent.alert;
+                window.parent.alert = function(msg) {
+                    var s = String(msg || '');
+                    if (s.toLowerCase().indexOf('script') !== -1 ||
+                        s.toLowerCase().indexOf('unity') !== -1  ||
+                        s.trim() === '') {
+                        console.warn('[VLibras/parent] Alert suprimido:', s);
+                        return;
+                    }
+                    _pAlert.apply(window.parent, [msg]);
+                };
+            } catch(e) {
+                // Cross-origin: não conseguiu acessar parent — sem problema
+            }
+        })();
+        </script>
 
         <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
         <script>
@@ -515,24 +557,37 @@ def _inject_vlibras():
             /* Começa fechado (só o botão de 80px) */
             resize(false);
 
-            /* ── Inicializa o VLibras e guarda instância para usar a API de tradução ── */
+            /* ── Inicializa o VLibras com retry (vlibras-plugin.js é async) ── */
             var vlibrasInstance = null;
-            if (window.VLibras) {
-                vlibrasInstance = new window.VLibras.Widget({
-                    rootPath: 'https://vlibras.gov.br/app',
-                    avatar:   'icaro',
-                    position: 'R',
-                    opacity:  1
-                });
+            var _initAttempts = 0;
+            var _maxAttempts  = 10; // até 5 s (10 × 500 ms)
+
+            function tryInitVLibras() {
+                _initAttempts++;
+                if (window.VLibras) {
+                    try {
+                        vlibrasInstance = new window.VLibras.Widget({
+                            rootPath: 'https://vlibras.gov.br/app',
+                            avatar:   'icaro',
+                            position: 'R',
+                            opacity:  1
+                        });
+                        console.log('[VLibras] ✅ Widget inicializado na tentativa', _initAttempts);
+                    } catch(e) {
+                        console.warn('[VLibras] Falha ao instanciar Widget:', e);
+                    }
+                } else if (_initAttempts < _maxAttempts) {
+                    setTimeout(tryInitVLibras, 500);
+                } else {
+                    console.warn('[VLibras] window.VLibras não disponível após', _maxAttempts, 'tentativas.');
+                }
             }
+            setTimeout(tryInitVLibras, 800);
 
             /* ── Controle de abertura/fechamento do painel ── */
             setTimeout(function () {
                 var btn = document.querySelector('[vw-access-button]');
 
-                /* Toggle simples — único ponto de controle do estado.
-                 * Evita offsetWidth/getComputedStyle que retornam positivo
-                 * mesmo com o painel fechado e causam false positives. */
                 if (btn) {
                     btn.addEventListener('click', function() {
                         panelOpen = !panelOpen;
@@ -576,19 +631,10 @@ def _inject_vlibras():
                         }
                     } catch(e2) {}
 
-                    // Debug — mostra o que está disponível no VLibras
-                    console.log('[VLibras Debug] vlibrasInstance keys:',
-                        vlibrasInstance ? Object.keys(vlibrasInstance) : 'null');
-                    console.log('[VLibras Debug] window.vlibras:',
-                        window.vlibras   ? Object.keys(window.vlibras) : 'null');
-                    console.log('[VLibras Debug] window.VLibras:',
-                        Object.keys(window.VLibras || {}));
-
-                    // Método 3: Simula seleção de texto no iframe + todos os eventos de clique
+                    // Método 3: Simula seleção de texto no iframe + eventos de clique
                     var tmp = document.createElement('p');
                     tmp.id  = 'vw-translate-tmp';
                     tmp.textContent = text;
-                    // Elemento pequeno mas dentro do viewport (VLibras pode ignorar elementos fora)
                     tmp.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;' +
                                         'z-index:-999;color:rgba(0,0,0,0.01);font-size:1px;overflow:hidden;';
                     document.body.appendChild(tmp);
@@ -599,14 +645,13 @@ def _inject_vlibras():
                     sel.removeAllRanges();
                     sel.addRange(range);
 
-                    // Dispara mousedown, mouseup e click em cascata
                     ['mousedown', 'mouseup', 'click'].forEach(function(evtType) {
                         var opts = {bubbles: true, cancelable: true, view: window};
                         tmp.dispatchEvent(new MouseEvent(evtType, opts));
                         document.body.dispatchEvent(new MouseEvent(evtType, opts));
                         document.dispatchEvent(new MouseEvent(evtType, opts));
                     });
-                    console.log('[VLibras] 🤟 via simulação DOM (mousedown+mouseup+click)');
+                    console.log('[VLibras] 🤟 via simulação DOM');
 
                     setTimeout(function() {
                         var el = document.getElementById('vw-translate-tmp');
@@ -614,14 +659,8 @@ def _inject_vlibras():
                     }, 5000);
                 }
 
-                var pendingText = '';
                 function translateWithOpen(text) {
-                    if (!panelOpen) {
-                        // Apenas tenta traduzir se painel já estiver aberto
-                        // (cursor pointer só aparece quando panelOpen=true,
-                        //  então este caminho nunca deve ser chamado quando fechado)
-                        return;
-                    }
+                    if (!panelOpen) return;
                     doTranslate(text);
                 }
 
@@ -629,7 +668,6 @@ def _inject_vlibras():
                     var pDoc = window.parent.document;
                     var pWin = window.parent;
 
-                    // Cursor pointer apenas quando VLibras estiver ativo (body.vlibras-active)
                     if (!pDoc.querySelector('#vw-bridge-style')) {
                         var sty = pDoc.createElement('style');
                         sty.id  = 'vw-bridge-style';
@@ -646,15 +684,12 @@ def _inject_vlibras():
                         pDoc.head.appendChild(sty);
                     }
 
-                    // Listener de clique no documento pai
                     pDoc.body.addEventListener('click', function(e) {
-                        // Só traduz quando VLibras já estiver com painel aberto
                         if (!panelOpen) return;
 
                         var tag = (e.target.tagName || '').toUpperCase();
                         if (/^(INPUT|TEXTAREA|BUTTON|A|SELECT|OPTION|SVG|PATH)$/.test(tag)) return;
 
-                        // Prioriza texto selecionado; fallback para textContent do elemento
                         var sel  = pWin.getSelection();
                         var text = sel && sel.toString().trim();
                         if (!text || text.length < 3) {
@@ -664,7 +699,7 @@ def _inject_vlibras():
                         if (text && text.length >= 3) doTranslate(text);
                     });
 
-                    console.log('[VLibras] ✅ Bridge de tradução ativo — clique em qualquer texto da página.');
+                    console.log('[VLibras] ✅ Bridge de tradução ativo.');
                 } catch(be) {
                     console.error('[VLibras] ❌ Erro ao configurar bridge:', be);
                 }
