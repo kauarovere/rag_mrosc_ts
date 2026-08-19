@@ -952,7 +952,7 @@ with st.sidebar:
     selected_label = st.selectbox(
         "Provedor de LLM",
         options=list(provider_options.keys()),
-        index=0,
+        index=1,  # Gemini padrão — mais rápido e melhor qualidade em português
         help="Escolha o modelo de linguagem: Groq ou Google Gemini.",
     )
     selected_provider = provider_options[selected_label]

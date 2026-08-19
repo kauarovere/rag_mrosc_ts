@@ -144,7 +144,7 @@ def _get_gemini():
             "Defina-a no arquivo .env ou use o provedor 'ollama' (padrão)."
         )
 
-    model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     print(f"   ✨ LLM: Google Gemini | modelo: {model}")
 
     return ChatGoogleGenerativeAI(
